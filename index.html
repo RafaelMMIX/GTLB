@@ -7,7 +7,7 @@
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;overflow:hidden;background:#17301c;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#fff;touch-action:none;user-select:none}
-  canvas#c{position:fixed;inset:0;display:block}
+  canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block}
   .panel{background:rgba(10,14,12,.62);border:1px solid rgba(255,255,255,.14);border-radius:10px;backdrop-filter:blur(4px)}
   #hud{position:fixed;left:12px;top:12px;padding:10px 14px;min-width:230px;max-width:min(340px,60vw);pointer-events:none}
   #money{font-size:26px;font-weight:800;color:#8ee28e;letter-spacing:.5px}
@@ -70,7 +70,7 @@
   #radio b{color:#ffd23f}
   #bM{right:112px;bottom:120px}
   #mini{cursor:pointer}
-  #bigmap{position:fixed;inset:0;z-index:7;display:none;background:#0f1a14;cursor:grab}
+  #bigmap{position:fixed;inset:0;width:100%;height:100%;z-index:7;display:none;background:#0f1a14;cursor:grab}
   #bigcap{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:8;display:none;padding:7px 14px;font-size:13px;border-radius:10px}
   body.in #mini,body.in #speed,body.in #place,body.in #clock{display:none!important}
   #shop{display:none;z-index:6;background:rgba(5,10,8,.84)}
