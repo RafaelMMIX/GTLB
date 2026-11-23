@@ -37,14 +37,6 @@
   #busted h1{font-size:clamp(40px,10vw,100px);margin:0;font-weight:900;color:#fff;text-shadow:0 4px 0 #1b2f8a;letter-spacing:3px}
   #busted p{font-size:20px;margin:6px 0 0}
   #touch{display:none}
-  @media (pointer:coarse){
-    #touch{display:block}
-    #mini{width:110px;height:110px}
-    #clock{top:128px}
-    #speed{bottom:150px}
-    #place{bottom:170px}
-    #hint{bottom:190px}
-  }
   #joy{position:fixed;left:22px;bottom:22px;width:128px;height:128px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.3);z-index:4}
   #knob{position:absolute;left:34px;top:34px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.45)}
   .tb{position:fixed;width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.4);font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;z-index:4}
@@ -94,6 +86,40 @@
   .btn.close{background:#fff;float:right;margin-top:0}
   .sw{display:inline-block;width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.25);margin:3px;cursor:pointer;vertical-align:middle}
   .sw.on{border-color:#fff}
+  .touchonly{display:none}
+  #rotate{display:none;z-index:30;background:#0b1410;flex-direction:column}
+  #rotate div{font-size:64px;line-height:1.1}
+  #rotate h2{margin:10px 0 4px;font-size:22px;color:#ffd23f}
+  #rotate p{margin:0;opacity:.8;font-size:15px}
+  @media (pointer:coarse){
+    #touch{display:block}
+    .kbdonly{display:none}.touchonly{display:block}
+    #mini{width:96px;height:96px;right:8px;top:8px}
+    #clock{top:108px;right:8px}
+    #phoneIco{top:136px;right:8px;width:40px;height:40px;font-size:20px}
+    #hud{left:8px;top:8px;padding:6px 10px;min-width:150px;max-width:36vw}
+    #money{font-size:20px}#stars{font-size:16px;letter-spacing:2px}#mission{font-size:12px;margin-top:4px}
+    #speed{left:50%;right:auto;transform:translateX(-50%);bottom:8px;font-size:16px}
+    #place{left:50%;transform:translateX(-50%);bottom:auto;top:8px;font-size:12px;padding:4px 10px;max-width:28vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #radio{top:40px;font-size:11px;padding:4px 10px;max-width:34vw}
+    #toast{top:22%;font-size:14px;padding:6px 14px}
+    #hint{bottom:44px;font-size:13px}
+    #start{padding:6px;overflow:auto}
+    #start h1 img{max-height:30vh;max-width:50vw}
+    #start h2{margin:2px 0 6px;font-size:11px;letter-spacing:2px}
+    #start .box{margin:0 auto 8px;padding:6px 12px;font-size:12px;line-height:1.4;max-width:80vw}
+    .go{padding:8px 24px;font-size:16px}
+    #bM,#bT{display:none}
+    #joy{left:16px;bottom:16px;width:112px;height:112px}
+    #knob{left:29px;top:29px;width:54px;height:54px}
+    .tb{width:56px;height:56px;font-size:10px;letter-spacing:-.2px}
+    #bE{right:14px;bottom:14px;width:76px;height:76px;font-size:22px}
+    #bB{right:100px;bottom:14px}
+    #bH{right:14px;bottom:98px}
+    #bV{right:80px;bottom:98px}
+    #bR{right:146px;bottom:98px}
+  }
+  @media (pointer:coarse) and (orientation:portrait){#rotate{display:flex}}
 </style>
 </head>
 <body>
@@ -129,11 +155,12 @@
     <h1><img src="logo.png" alt="Grand Theft Lamotte-Beuvron" onerror="this.replaceWith(document.createTextNode('Grand Theft Lamotte-Beuvron'))"></h1>
     <h2>Version 0.6 · téléphone et chevaux</h2>
     <div class="box panel">
-      <div><kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> ou <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> : marcher / conduire</div>
-      <div><kbd>E</kbd> : monter / descendre d'une voiture</div>
-      <div><kbd>E</kbd> devant une porte (cercle de couleur) : entrer dans l'Hôtel Tatin, le garage, la boutique</div>
-      <div><kbd>T</kbd> : téléphone (Lamotte-Gram, GPS, taxi, banque…) · <kbd>R</kbd> : radio (en voiture) · <kbd>V</kbd> : appeler ta voiture · <kbd>Tab</kbd> : grande carte (ou clic sur la mini-carte)</div>
-      <div><kbd>Espace</kbd> : frein à main · <kbd>H</kbd> : klaxon · <kbd>Maj</kbd> : courir · <kbd>M</kbd> : son</div>
+      <div class="kbdonly"><kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> ou <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> : marcher / conduire</div>
+      <div class="kbdonly"><kbd>E</kbd> : monter / descendre d'une voiture</div>
+      <div class="kbdonly"><kbd>E</kbd> devant une porte (cercle de couleur) : entrer dans l'Hôtel Tatin, le garage, la boutique</div>
+      <div class="kbdonly"><kbd>T</kbd> : téléphone (Lamotte-Gram, GPS, taxi, banque…) · <kbd>R</kbd> : radio (en voiture) · <kbd>V</kbd> : appeler ta voiture · <kbd>Tab</kbd> : grande carte (ou clic sur la mini-carte)</div>
+      <div class="kbdonly"><kbd>Espace</kbd> : frein à main · <kbd>H</kbd> : klaxon · <kbd>Maj</kbd> : courir · <kbd>M</kbd> : son</div>
+      <div class="touchonly">Joystick à gauche pour bouger · <b>E</b> : monter / entrer · <b>FREIN</b>, <b>KLAXON</b>, <b>VOITURE</b>, <b>RADIO</b> à droite · 📱 téléphone · touche la mini-carte pour l'agrandir</div>
       <div style="margin-top:8px;color:#ffe08a">Entre dans l'Hôtel Tatin (rond jaune) et parle à Mme Tatin pour prendre une mission. Attention aux gendarmes.</div>
       <div style="margin-top:6px;font-size:12px;opacity:.7">Carte : © les contributeurs d'OpenStreetMap (ODbL)</div>
     </div>
@@ -143,6 +170,7 @@
 
 <canvas id="bigmap"></canvas><div id="bigcap" class="panel">Molette / +− : zoom · glisser : déplacer · clic : repère GPS · <kbd>Tab</kbd> ou <kbd>Échap</kbd> : fermer</div>
 <div id="phone" class="overlay"><div id="pb"><div id="pbar"></div><div id="pscr"></div><div id="pnav"><span data-p="back">◀</span><span data-p="home">⬤</span><span data-p="close">✕</span></div></div></div>
+<div id="rotate" class="overlay"><div>📱↻</div><h2>Tourne ton téléphone</h2><p>Grand Theft Lamotte-Beuvron se joue en mode paysage.</p></div>
 <div id="shop" class="overlay"><div class="win panel" id="shopWin"></div></div>
 
 <div id="busted" class="overlay"><h1>ARRÊTÉ !</h1><p>Direction la gendarmerie…</p></div>
@@ -1176,9 +1204,10 @@ function taxiTo(k) {
   player.car = null; player.x = d.x + 40; player.y = d.y + 40; { const r = pushOut(player.x, player.y, 10); if (r) { player.x = r.x; player.y = r.y; } }
   cam.x = player.x; cam.y = player.y; togglePhone(); toast('🚕 Course payée (25 €) : ' + d.name, 2.6);
 }
+let ovAt = 0;
 function togglePhone() {
   if (!phoneOpen && (inside || shopOpen || bustedUntil)) { toast('📵 Pas de réseau ici.', 1.5); return; }
-  phoneOpen = !phoneOpen; $('phone').style.display = phoneOpen ? 'flex' : 'none';
+  ovAt = performance.now(); phoneOpen = !phoneOpen; $('phone').style.display = phoneOpen ? 'flex' : 'none';
   if (phoneOpen) { for (const k in keys) keys[k] = false; phoneApp = 'home'; renderPhone(); }
 }
 function renderPhone() {
@@ -1219,7 +1248,7 @@ function renderPhone() {
   $('phoneIco').innerHTML = '📱' + (smsUnread ? '<b>' + smsUnread + '</b>' : '');
 }
 $('phone').addEventListener('click', e => {
-  const t = e.target.closest('[data-p]'); if (!t) { if (e.target.id === 'phone') togglePhone(); return; }
+  const t = e.target.closest('[data-p]'); if (!t) { if (e.target.id === 'phone' && performance.now() - ovAt > 450) togglePhone(); return; }
   const i = t.dataset.p.indexOf(':'), a = i < 0 ? t.dataset.p : t.dataset.p.slice(0, i), arg = i < 0 ? '' : t.dataset.p.slice(i + 1);
   if (a === 'close') { togglePhone(); return; }
   if (a === 'app') phoneApp = arg; else if (a === 'home' || a === 'back') phoneApp = 'home';
@@ -1538,7 +1567,7 @@ function drawInside() {
   ctx.fillStyle = '#fff'; ctx.font = '900 22px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 4; ctx.strokeText(R.title, 350, -14); ctx.fillText(R.title, 350, -14);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
-function openShop(kind) { shopOpen = true; shopKind = kind; renderShop(); $('shop').style.display = 'flex'; }
+function openShop(kind) { ovAt = performance.now(); shopOpen = true; shopKind = kind; renderShop(); $('shop').style.display = 'flex'; }
 function closeShop() { shopOpen = false; $('shop').style.display = 'none'; wantAction = false; }
 function renderShop() {
   const btn = (act, label, off) => '<span class="btn' + (off ? ' off' : '') + '" data-act="' + act + '">' + label + '</span>';
@@ -1566,7 +1595,7 @@ function renderShop() {
   $('shopWin').innerHTML = h;
 }
 $('shop').addEventListener('click', e => {
-  const t = e.target.closest('[data-act]'); if (!t) { if (e.target.id === 'shop') closeShop(); return; }
+  const t = e.target.closest('[data-act]'); if (!t) { if (e.target.id === 'shop' && performance.now() - ovAt > 450) closeShop(); return; }
   const i = t.dataset.act.indexOf(':'), act = i < 0 ? t.dataset.act : t.dataset.act.slice(0, i), arg = i < 0 ? '' : t.dataset.act.slice(i + 1), poor = () => toast("Pas assez d'argent !", 1.6);
   if (act === 'close') { closeShop(); return; }
   if (act === 'eat') { const f = FOOD_BAKERY.concat(FOOD_MARKET).find(x => x[0] === arg); if (money >= f[2]) { money -= f[2]; buff[f[3]] = f[5]; persist(); toast(f[1] + ' : ' + f[4], 2.4); } else poor(); renderShop(); return; }
@@ -1584,7 +1613,7 @@ let last = 0;
 function frame(ts) {
   const dt = Math.min(0.05, (ts - last) / 1000 || 0.016); last = ts;
   if (loaded) {
-    if (running && !mapOpen && !phoneOpen) {
+    if (running && !mapOpen && !phoneOpen && !(typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse) and (orientation:portrait)').matches)) {
       time += dt; gameMin += dt * 4;
       if (inside) updateInside(dt);
       else {
@@ -1610,7 +1639,7 @@ function frame(ts) {
   }
   requestAnimationFrame(frame);
 }
-function startGame() { if (!loaded) return; initAudio(); if (AC && AC.state === 'suspended') safe(() => AC.resume()); running = true; $('start').style.display = 'none'; }
+function startGame() { if (!loaded) return; if (window.matchMedia && matchMedia('(pointer:coarse)').matches) safe(() => { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (r && r.then) r.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape')).catch(() => { }); }); initAudio(); if (AC && AC.state === 'suspended') safe(() => AC.resume()); running = true; $('start').style.display = 'none'; }
 function pauseGame() { running = false; for (const k in keys) keys[k] = false; $('start').style.display = 'flex'; $('goBtn').textContent = '▶ REPRENDRE'; if (AC) { engG.gain.value = 0; sirG.gain.value = 0; helG.gain.value = 0; trnG.gain.value = 0; bellG.gain.value = 0; } if (typeof speechSynthesis !== 'undefined') safe(() => speechSynthesis.cancel()); }
 $('start').addEventListener('pointerdown', startGame);
 
