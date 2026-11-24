@@ -459,7 +459,7 @@ save.bank = save.bank || 0; save.ach = save.ach || {}; save.st = Object.assign({
 function persist() { if (FOOT) save.miR = mi; else save.mi = mi; safe(() => { localStorage.setItem('glb_save', JSON.stringify(save)); localStorage.setItem('glb_money', money); }); }
 let wanted = 0, lastCrime = -99, evade = 0, bust = 0, time = 0, gameMin = 8 * 60, hubCD = 0, mi = (FOOT ? save.miR : save.mi) || 0, mission = null, cam = { x: 0, y: 0 }, shake = 0, bustedUntil = 0, popT = 0, nameT = 0, streetName = '';
 let phoneOpen = false, phoneApp = 'home', wp = null, feed = [], smsList = [], smsUnread = 0, welcomed = false, smsRand = 200, achT = 1, lastGramCrime = -99;
-let boars = [], boarCD = 5, train = null, trainCD = 12, tpath = null, xings = [], buff = { foot: 0, car: 0, pay: 0 }, radioSt = 0, flashT = 0, flashTxt = '', flashCD = 0, flashRand = 30, robCD = {}, robbedNow = false, radioNext = 0, radioStep = 0, radioWas = false;
+let boars = [], boarCD = 5, trains = [], tpaths = [], trainCD = 12, tpath = null, xings = [], buff = { foot: 0, car: 0, pay: 0 }, radioSt = 0, flashT = 0, flashTxt = '', flashCD = 0, flashRand = 30, robCD = {}, robbedNow = false, radioNext = 0, radioStep = 0, radioWas = false;
 let floaters = [], fcops = [], heli = null, blockT = 0, myCar = null, vehicleDirty = false, shopOpen = false, shopKind = '', inside = null;
 const MISSIONS_L = [
   { title: 'La tarte du concours', say: 'Mme Tatin : « Le concours de la tarte Tatin est ce soir ! Porte cette tarte à la mairie, vite ! »', done: 'La mairie est ravie. Le concours aura bien lieu !', steps: [{ poi: 'mairie', txt: 'Livre la tarte Tatin à la mairie' }], pay: 120 },
@@ -1097,7 +1097,7 @@ function drawBigMap() {
   const lab = (x, y, col, t, r) => { const [px, py] = pos(x, y); g.fillStyle = col; g.strokeStyle = '#000'; g.lineWidth = 2.5; g.beginPath(); g.arc(px, py, r || 7, 0, 7); g.stroke(); g.fill(); if (t) { g.font = '800 13px system-ui,sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(t, px, py - 12); g.fillStyle = '#fff'; g.fillText(t, px, py - 12); } };
   for (const k in POI) { const q = POI[k]; if (q && q.sx !== undefined && q.name && bigV.z > 1.6) lab(q.sx, q.sy, '#e8e8e8', q.name, 3.5); }
   for (const id in PLACES) if (id !== HUBID) lab(PLACES[id].x, PLACES[id].y, PLACES[id].col, PLACES[id].name, 6);
-  if (train) for (let i = 0; i < train.n; i += train.n - 1) { const w = trainPos(i); lab(w.x, w.y, '#ff8a3d', i ? '' : '🚆 Train', 6); }
+  for (const T of trains) for (let i = 0; i < T.n; i += T.n - 1) { const w = trainPos(T, i); lab(w.x, w.y, '#ff8a3d', i ? '' : '🚆 Train', 6); }
   if (wp) lab(wp.x, wp.y, '#35d0ff', '📍 ' + wp.name, 8);
   if (!mission) lab(hub.x, hub.y, '#ffd23f', FOOT ? 'Lycée' : 'Hôtel Tatin', 8); else lab(mission.to.x, mission.to.y, '#ff8a3d', 'Destination', 8);
   if (myCar && cars.indexOf(myCar) >= 0 && !player.car) lab(myCar.x, myCar.y, save.color, 'Ma voiture', 6);
@@ -1118,7 +1118,7 @@ function drawMini() {
   const pos = (x, y) => [((x / S - MX0) * sc - sx) * k, ((y / S - MY0) * sc - sy) * k];
   const dot = (x, y, r, col, edge) => { let [px, py] = pos(x, y); if (edge) { px = clamp(px, 8, 292); py = clamp(py, 8, 292); } else if (px < 0 || py < 0 || px > 300 || py > 300) return; mctx.fillStyle = col; mctx.strokeStyle = '#000'; mctx.lineWidth = 2; mctx.beginPath(); mctx.arc(px, py, r, 0, 7); mctx.stroke(); mctx.fill(); };
   for (const id in PLACES) if (id !== HUBID) dot(PLACES[id].x, PLACES[id].y, 4, PLACES[id].col, false);
-  if (train) for (let i = 0; i < train.n; i += 2) { const w = trainPos(i); dot(w.x, w.y, 4, '#ff8a3d', false); }
+  for (const T of trains) for (let i = 0; i < T.n; i += 2) { const w = trainPos(T, i); dot(w.x, w.y, 4, '#ff8a3d', false); }
   for (const b of boars) dot(b.x, b.y, 2.5, '#7a4a2a', false);
   if (wp) dot(wp.x, wp.y, 6, '#35d0ff', true);
   if (!mission) dot(hub.x, hub.y, 8, '#ffd23f', true); else dot(mission.to.x, mission.to.y, 8, '#ff8a3d', true);
@@ -1344,41 +1344,49 @@ $('phone').addEventListener('click', e => {
 });
 
 /* ---------- trains, sangliers, radio ---------- */
-const TCHAIN = [6, 28, 30, 7, 8, 12, 13, 16, 39, 38, 17, 24, 23], TLEN = 6, TSP = 72;
-function buildTrain() {
-  if (FOOT) return;
+const TCHAINS = [[6, 28, 30, 7, 8, 12, 13, 16, 39, 38, 17, 24, 23], [25, 21, 22, 36, 35, 14, 11, 10, 9, 40, 29, 27, 4]], TLEN = 6, TSP = 72;
+function mkTrainPath(chain) {
   const pts = []; let cx = null, cy = null;
-  for (const idx of TCHAIN) {
+  for (const idx of chain) {
     const r = D.rail[idx]; if (!r) continue; const a = []; for (let i = 0; i < r.length; i += 2) a.push([r[i] / 10 * S, r[i + 1] / 10 * S]);
     if (cx !== null && dist(a[0][0], a[0][1], cx, cy) > dist(a[a.length - 1][0], a[a.length - 1][1], cx, cy)) a.reverse();
     if (cx !== null && dist(a[0][0], a[0][1], cx, cy) > 500) continue;
     for (const q of a) pts.push(q); cx = a[a.length - 1][0]; cy = a[a.length - 1][1];
   }
-  if (pts.length < 2) return;
+  if (pts.length < 2) return null;
   const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + dist(pts[i][0], pts[i][1], pts[i - 1][0], pts[i - 1][1]));
-  tpath = { pts, cum, L: cum[cum.length - 1] };
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [ax, ay] = pts[i], [bx, by] = pts[i + 1], ex = bx - ax, ey = by - ay, el = Math.hypot(ex, ey); if (el < 1) continue;
-    const x0 = Math.min(ax, bx) - 40, x1 = Math.max(ax, bx) + 40, y0 = Math.min(ay, by) - 40, y1 = Math.max(ay, by) + 40;
-    for (const r of roads) {
-      if (r.c > 8 || r.x1 < x0 || r.x0 > x1 || r.y1 < y0 || r.y0 > y1) continue; const p = r.p;
-      for (let j = 0; j < p.length - 2; j += 2) {
-        const fx = p[j + 2] - p[j], fy = p[j + 3] - p[j + 1], den = ex * fy - ey * fx; if (Math.abs(den) < 1e-6) continue;
-        const t = ((p[j] - ax) * fy - (p[j + 1] - ay) * fx) / den, u = ((p[j] - ax) * ey - (p[j + 1] - ay) * ex) / den;
-        if (t < 0 || t > 1 || u < 0 || u > 1) continue;
-        const X = ax + ex * t, Y = ay + ey * t, s = cum[i] + el * t;
-        if (xings.some(o => Math.abs(o.s - s) < 70)) continue;
-        xings.push({ x: X, y: Y, s, ra: Math.atan2(ey, ex), rd: Math.atan2(fy, fx), w: r.w, closed: false });
+  return { pts, cum, L: cum[cum.length - 1], k: 0, stS: undefined };
+}
+function buildTrain() {
+  if (FOOT) return;
+  for (const ch of TCHAINS) { const tp = mkTrainPath(ch); if (tp) { tp.k = tpaths.length; tpaths.push(tp); } }
+  if (!tpaths.length) return; tpath = tpaths[0];
+  for (const tp of tpaths) {
+    const pts = tp.pts, cum = tp.cum;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, ay] = pts[i], [bx, by] = pts[i + 1], ex = bx - ax, ey = by - ay, el = Math.hypot(ex, ey); if (el < 1) continue;
+      const x0 = Math.min(ax, bx) - 40, x1 = Math.max(ax, bx) + 40, y0 = Math.min(ay, by) - 40, y1 = Math.max(ay, by) + 40;
+      for (const r of roads) {
+        if (r.c > 8 || r.x1 < x0 || r.x0 > x1 || r.y1 < y0 || r.y0 > y1) continue; const p = r.p;
+        for (let j = 0; j < p.length - 2; j += 2) {
+          const fx = p[j + 2] - p[j], fy = p[j + 3] - p[j + 1], den = ex * fy - ey * fx; if (Math.abs(den) < 1e-6) continue;
+          const t = ((p[j] - ax) * fy - (p[j + 1] - ay) * fx) / den, u = ((p[j] - ax) * ey - (p[j + 1] - ay) * ex) / den;
+          if (t < 0 || t > 1 || u < 0 || u > 1) continue;
+          const X = ax + ex * t, Y = ay + ey * t, sv = cum[i] + el * t;
+          const o = xings.find(q => dist(q.x, q.y, X, Y) < 70);
+          if (o) { if (!o.ss.some(q => q.p === tp.k && Math.abs(q.s - sv) < 70)) o.ss.push({ p: tp.k, s: sv }); continue; }
+          xings.push({ x: X, y: Y, ss: [{ p: tp.k, s: sv }], ra: Math.atan2(ey, ex), rd: Math.atan2(fy, fx), w: r.w, closed: false });
+        }
       }
     }
   }
 }
-function trainAt(s) {
-  const c = tpath.cum, n = c.length; s = clamp(s, 0, tpath.L); let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (c[m] <= s) lo = m; else hi = m; }
-  const a = tpath.pts[lo], b = tpath.pts[hi], t = (s - c[lo]) / Math.max(1e-6, c[hi] - c[lo]);
+function trainAt(s, tp) {
+  tp = tp || tpath; const c = tp.cum, n = c.length; s = clamp(s, 0, tp.L); let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (c[m] <= s) lo = m; else hi = m; }
+  const a = tp.pts[lo], b = tp.pts[hi], t = (s - c[lo]) / Math.max(1e-6, c[hi] - c[lo]);
   return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, a: Math.atan2(b[1] - a[1], b[0] - a[0]) };
 }
-function trainPos(i) { const q = trainAt(train.s - train.dir * i * TSP); return q; }
+function trainPos(T, i) { return trainAt(T.s - T.dir * i * TSP, T.tp); }
 function xClosedAhead(c) {
   for (const x of xings) {
     if (!x.closed) continue; const dx = x.x - c.x, dy = x.y - c.y; if (Math.abs(dx) > 260 || Math.abs(dy) > 260) continue;
@@ -1396,30 +1404,31 @@ function trainKill() {
   save.st.train++; gramEvent('train');
   toast('💥 Percuté par le train ! Réveil à l’hôpital (facture : ' + fine + ' €).', 4.5);
 }
-let stationS;
-function findStationS() {
-  stationS = null; const g = POI.gare; if (!g || !tpath) return; let bs = -1, bd = 1e18;
-  for (let q = 0; q < tpath.L; q += 15) { const w = trainAt(q), d = dist(w.x, w.y, g.x, g.y); if (d < bd) { bd = d; bs = q; } }
-  if (bd < 450) stationS = bs;
+function findStationS(tp) {
+  tp.stS = null; const g = POI.gare; if (!g) return; let bs = -1, bd = 1e18;
+  for (let q = 0; q < tp.L; q += 15) { const w = trainAt(q, tp), d = dist(w.x, w.y, g.x, g.y); if (d < bd) { bd = d; bs = q; } }
+  if (bd < 450) tp.stS = bs;
 }
 function updateTrain(dt) {
-  if (!tpath) return; const p = pp();
-  if (stationS === undefined) findStationS();
+  if (!tpaths.length) return; const p = pp();
   trainCD -= dt;
-  if (!train && trainCD <= 0) {
+  if (trains.length < 2 && trainCD <= 0) {
+    const free = tpaths.filter(q => !trains.some(T => T.tp === q)), tp = free[randInt(0, free.length - 1)];
+    if (tp.stS === undefined) findStationS(tp);
     let ref = -1, atStation = false;
-    if (stationS !== null) { const w = trainAt(stationS); if (dist(w.x, w.y, p.x, p.y) < 4200) { ref = stationS; atStation = true; } }
-    if (ref < 0) { let bd = 1e18; for (let q = 0; q < tpath.L; q += 120) { const w = trainAt(q), d = dist(w.x, w.y, p.x, p.y); if (d < bd) { bd = d; ref = q; } } if (bd > 3200) ref = -1; }
-    if (ref < 0) trainCD = 10;
+    if (tp.stS !== null) { const w = trainAt(tp.stS, tp); if (dist(w.x, w.y, p.x, p.y) < 4200) { ref = tp.stS; atStation = true; } }
+    if (ref < 0) { let bd = 1e18; for (let q = 0; q < tp.L; q += 120) { const w = trainAt(q, tp), d = dist(w.x, w.y, p.x, p.y); if (d < bd) { bd = d; ref = q; } } if (bd > 3200) ref = -1; }
+    if (ref < 0) trainCD = 8;
     else {
-      const dir = Math.random() < 0.5 ? 1 : -1, kind = Math.random() < 0.7 ? 'ter' : 'fret', n = kind === 'ter' ? (Math.random() < 0.5 ? 4 : 6) : 8, len = (n - 1) * TSP + 40, vmax = kind === 'ter' ? 230 : 260;
-      train = { s: clamp(ref - dir * 3200, 0, tpath.L), dir, end: clamp(ref + dir * 4800, 0, tpath.L), v: vmax, vmax, len, n, kind, stop: (kind === 'ter' && atStation) ? clamp(ref + dir * len / 2, 0, tpath.L) : null, dw: 0, done: false };
+      const kind = Math.random() < 0.7 ? 'ter' : 'fret', n = kind === 'ter' ? (Math.random() < 0.5 ? 4 : 6) : 8, len = (n - 1) * TSP + 40, vmax = kind === 'ter' ? 230 : 260;
+      trains.push({ tp, s: clamp(ref - 3200, 0, tp.L), dir: 1, end: clamp(ref + 4800, 0, tp.L), v: vmax, vmax, len, n, kind, stop: (kind === 'ter' && atStation) ? clamp(ref + len / 2, 0, tp.L) : null, dw: 0, done: false });
+      trainCD = rand(14, 32);
       toast(kind === 'ter' ? '🚆 Un TER approche… attention aux barrières !' : '🚆 Un train de fret approche… attention aux barrières !', 3);
       radioFlash('Info trafic : ' + (kind === 'ter' ? 'un TER Centre-Val de Loire' : 'un train de marchandises') + ' traverse Lamotte-Beuvron. Attention aux passages à niveau.');
     }
   }
-  if (train) {
-    const T = train;
+  for (let ti = trains.length - 1; ti >= 0; ti--) {
+    const T = trains[ti];
     if (T.stop !== null && !T.done) {
       const d = T.dir * (T.stop - T.s);
       if (T.dw > 0) { T.v = 0; T.dw -= dt; if (T.dw <= 0) T.done = true; }
@@ -1427,19 +1436,22 @@ function updateTrain(dt) {
       else T.v = Math.min(T.v + 70 * dt, Math.sqrt(2 * 55 * d) + 6, T.vmax);
     } else T.v = Math.min(T.vmax, T.v + 60 * dt);
     T.s += T.dir * T.v * dt;
-    const p0 = trainAt(T.s);
+    const p0 = trainAt(T.s, T.tp);
     if (T.v > 20) for (let i = 0; i < T.n; i++) {
-      const w = trainPos(i);
+      const w = trainPos(T, i);
       for (let k = cars.length - 1; k >= 0; k--) { const c = cars[k]; if (Math.abs(c.x - w.x) > 80 || Math.abs(c.y - w.y) > 80) continue; if (dist(c.x, c.y, w.x, w.y) < 44) { if (c === player.car) { trainKill(); return; } cars.splice(k, 1); if (c === myCar) myCar = null; shake = Math.max(shake, 5); } }
       if (!player.car && dist(player.x, player.y, w.x, w.y) < 34) { trainKill(); return; }
       for (const q of peds) if (!q.ko && dist(q.x, q.y, w.x, w.y) < 36) { q.ko = 8; q.say = 'Aïe…'; q.sayT = 2; }
       for (const b of boars) if (!b.dead && dist(b.x, b.y, w.x, w.y) < 40) b.dead = 1;
     }
-    if (T.dir * (T.s - T.end) >= 0 || dist(p0.x, p0.y, p.x, p.y) > 7000) { train = null; trainCD = rand(25, 50); }
+    if (T.dir * (T.s - T.end) >= 0 || dist(p0.x, p0.y, p.x, p.y) > 7000) trains.splice(ti, 1);
   }
   for (const x of xings) {
     let cl = false;
-    if (train) { const t1 = train.s, t2 = train.s - train.dir * train.len; let lo = Math.min(t1, t2), hi = Math.max(t1, t2); if (train.dir > 0) { lo -= 90; hi += 750; } else { lo -= 750; hi += 90; } cl = x.s >= lo && x.s <= hi; }
+    for (const T of trains) {
+      const t1 = T.s, t2 = T.s - T.dir * T.len; let lo = Math.min(t1, t2), hi = Math.max(t1, t2); if (T.dir > 0) { lo -= 90; hi += 750; } else { lo -= 750; hi += 90; }
+      for (const q of x.ss) if (q.p === T.tp.k && q.s >= lo && q.s <= hi) cl = true;
+    }
     x.closed = cl;
   }
 }
@@ -1466,9 +1478,9 @@ function drawRailStuff(scale, vx0, vx1, vy0, vy1) {
     ctx.fillStyle = '#5a3e2b'; ctx.beginPath(); ctx.ellipse(0, 0, 19, 11, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#4a3222'; ctx.beginPath(); ctx.ellipse(19, 0, 9, 7, 0, 0, 7); ctx.fill();
     ctx.fillStyle = '#f2f2e6'; ctx.fillRect(24, -7, 5, 2); ctx.fillRect(24, 5, 5, 2); ctx.restore();
   }
-  if (train) {
+  for (const train of trains) {
     for (let i = train.n - 1; i >= 0; i--) {
-      const w = trainPos(i); if (w.x < vx0 - 60 || w.x > vx1 + 60 || w.y < vy0 - 60 || w.y > vy1 + 60) continue;
+      const w = trainPos(train, i); if (w.x < vx0 - 60 || w.x > vx1 + 60 || w.y < vy0 - 60 || w.y > vy1 + 60) continue;
       ctx.save(); ctx.translate(w.x + 6, w.y + 8); ctx.rotate(w.a); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(-35, -16, 70, 32); ctx.restore();
       ctx.save(); ctx.translate(w.x, w.y); ctx.rotate(w.a + (train.dir < 0 ? Math.PI : 0));
       if (train.kind === 'fret') {
@@ -1745,7 +1757,7 @@ function frame(ts) {
         const on = player.car && player.car.kind !== 'cheval' && !muted && !inside; engG.gain.value = on ? 0.015 + 0.03 * Math.min(1, Math.abs(player.car.v) / 370) : 0; eng.frequency.value = 45 + (player.car ? Math.abs(player.car.v) * 0.3 : 0);
         let nd = 1e9; if (!inside) for (const c of cars) if (c.type === 'cop' && c.chase) nd = Math.min(nd, dist(c.x, c.y, pp().x, pp().y));
         sirG.gain.value = (!muted && nd < 1200) ? 0.012 * (1 - nd / 1200) : 0; sir.frequency.value = Math.floor(time * 2) % 2 ? 720 : 960;
-        { let dn = 1e9; if (train && !inside && train.v > 5) for (let i = 0; i < train.n; i += 2) { const w = trainPos(i); dn = Math.min(dn, dist(w.x, w.y, pp().x, pp().y)); }
+        { let dn = 1e9; if (!inside) for (const T of trains) if (T.v > 5) for (let i = 0; i < T.n; i += 2) { const w = trainPos(T, i); dn = Math.min(dn, dist(w.x, w.y, pp().x, pp().y)); }
           trnG.gain.value = (!muted && dn < 1600) ? 0.03 * (1 - dn / 1600) : 0;
           let bn = 1e9; if (!inside) for (const x of xings) if (x.closed) bn = Math.min(bn, dist(x.x, x.y, pp().x, pp().y));
           bellG.gain.value = (!muted && bn < 900 && Math.floor(time * 5) % 2) ? 0.008 * (1 - bn / 900) : 0; }
