@@ -1097,7 +1097,7 @@ function drawBigMap() {
   const lab = (x, y, col, t, r) => { const [px, py] = pos(x, y); g.fillStyle = col; g.strokeStyle = '#000'; g.lineWidth = 2.5; g.beginPath(); g.arc(px, py, r || 7, 0, 7); g.stroke(); g.fill(); if (t) { g.font = '800 13px system-ui,sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(t, px, py - 12); g.fillStyle = '#fff'; g.fillText(t, px, py - 12); } };
   for (const k in POI) { const q = POI[k]; if (q && q.sx !== undefined && q.name && bigV.z > 1.6) lab(q.sx, q.sy, '#e8e8e8', q.name, 3.5); }
   for (const id in PLACES) if (id !== HUBID) lab(PLACES[id].x, PLACES[id].y, PLACES[id].col, PLACES[id].name, 6);
-  if (train) for (let i = 0; i < 6; i += 5) { const w = trainPos(i); lab(w.x, w.y, '#ff8a3d', i ? '' : '🚆 Train', 6); }
+  if (train) for (let i = 0; i < train.n; i += train.n - 1) { const w = trainPos(i); lab(w.x, w.y, '#ff8a3d', i ? '' : '🚆 Train', 6); }
   if (wp) lab(wp.x, wp.y, '#35d0ff', '📍 ' + wp.name, 8);
   if (!mission) lab(hub.x, hub.y, '#ffd23f', FOOT ? 'Lycée' : 'Hôtel Tatin', 8); else lab(mission.to.x, mission.to.y, '#ff8a3d', 'Destination', 8);
   if (myCar && cars.indexOf(myCar) >= 0 && !player.car) lab(myCar.x, myCar.y, save.color, 'Ma voiture', 6);
@@ -1118,7 +1118,7 @@ function drawMini() {
   const pos = (x, y) => [((x / S - MX0) * sc - sx) * k, ((y / S - MY0) * sc - sy) * k];
   const dot = (x, y, r, col, edge) => { let [px, py] = pos(x, y); if (edge) { px = clamp(px, 8, 292); py = clamp(py, 8, 292); } else if (px < 0 || py < 0 || px > 300 || py > 300) return; mctx.fillStyle = col; mctx.strokeStyle = '#000'; mctx.lineWidth = 2; mctx.beginPath(); mctx.arc(px, py, r, 0, 7); mctx.stroke(); mctx.fill(); };
   for (const id in PLACES) if (id !== HUBID) dot(PLACES[id].x, PLACES[id].y, 4, PLACES[id].col, false);
-  if (train) for (let i = 0; i < 6; i += 2) { const w = trainPos(i); dot(w.x, w.y, 4, '#ff8a3d', false); }
+  if (train) for (let i = 0; i < train.n; i += 2) { const w = trainPos(i); dot(w.x, w.y, 4, '#ff8a3d', false); }
   for (const b of boars) dot(b.x, b.y, 2.5, '#7a4a2a', false);
   if (wp) dot(wp.x, wp.y, 6, '#35d0ff', true);
   if (!mission) dot(hub.x, hub.y, 8, '#ffd23f', true); else dot(mission.to.x, mission.to.y, 8, '#ff8a3d', true);
@@ -1396,29 +1396,46 @@ function trainKill() {
   save.st.train++; gramEvent('train');
   toast('💥 Percuté par le train ! Réveil à l’hôpital (facture : ' + fine + ' €).', 4.5);
 }
+let stationS;
+function findStationS() {
+  stationS = null; const g = POI.gare; if (!g || !tpath) return; let bs = -1, bd = 1e18;
+  for (let q = 0; q < tpath.L; q += 15) { const w = trainAt(q), d = dist(w.x, w.y, g.x, g.y); if (d < bd) { bd = d; bs = q; } }
+  if (bd < 450) stationS = bs;
+}
 function updateTrain(dt) {
   if (!tpath) return; const p = pp();
+  if (stationS === undefined) findStationS();
   trainCD -= dt;
   if (!train && trainCD <= 0) {
-    let bs = -1, bd = 1e18; for (let s = 0; s < tpath.L; s += 120) { const q = trainAt(s), d = dist(q.x, q.y, p.x, p.y); if (d < bd) { bd = d; bs = s; } }
-    if (bd > 3200) trainCD = 10;
+    let ref = -1, atStation = false;
+    if (stationS !== null) { const w = trainAt(stationS); if (dist(w.x, w.y, p.x, p.y) < 4200) { ref = stationS; atStation = true; } }
+    if (ref < 0) { let bd = 1e18; for (let q = 0; q < tpath.L; q += 120) { const w = trainAt(q), d = dist(w.x, w.y, p.x, p.y); if (d < bd) { bd = d; ref = q; } } if (bd > 3200) ref = -1; }
+    if (ref < 0) trainCD = 10;
     else {
-      const dir = Math.random() < 0.5 ? 1 : -1, s0 = clamp(bs - dir * 3000, 0, tpath.L), end = clamp(bs + dir * 3800, 0, tpath.L);
-      train = { s: s0, dir, end, v: 230, len: (TLEN - 1) * TSP + 40 }; toast('🚆 Un train approche… attention aux barrières !', 3);
-      radioFlash('Info trafic : un train traverse Lamotte-Beuvron. Attention aux passages à niveau.');
+      const dir = Math.random() < 0.5 ? 1 : -1, kind = Math.random() < 0.7 ? 'ter' : 'fret', n = kind === 'ter' ? (Math.random() < 0.5 ? 4 : 6) : 8, len = (n - 1) * TSP + 40, vmax = kind === 'ter' ? 230 : 260;
+      train = { s: clamp(ref - dir * 3200, 0, tpath.L), dir, end: clamp(ref + dir * 4800, 0, tpath.L), v: vmax, vmax, len, n, kind, stop: (kind === 'ter' && atStation) ? clamp(ref + dir * len / 2, 0, tpath.L) : null, dw: 0, done: false };
+      toast(kind === 'ter' ? '🚆 Un TER approche… attention aux barrières !' : '🚆 Un train de fret approche… attention aux barrières !', 3);
+      radioFlash('Info trafic : ' + (kind === 'ter' ? 'un TER Centre-Val de Loire' : 'un train de marchandises') + ' traverse Lamotte-Beuvron. Attention aux passages à niveau.');
     }
   }
   if (train) {
-    train.s += train.dir * train.v * dt;
-    const p0 = trainAt(train.s - train.dir * 0); 
-    for (let i = 0; i < TLEN; i++) {
+    const T = train;
+    if (T.stop !== null && !T.done) {
+      const d = T.dir * (T.stop - T.s);
+      if (T.dw > 0) { T.v = 0; T.dw -= dt; if (T.dw <= 0) T.done = true; }
+      else if (d <= 2) { T.s = T.stop; T.v = 0; T.dw = 14; toast('🚆 Le TER s’arrête en gare.', 2.4); }
+      else T.v = Math.min(T.v + 70 * dt, Math.sqrt(2 * 55 * d) + 6, T.vmax);
+    } else T.v = Math.min(T.vmax, T.v + 60 * dt);
+    T.s += T.dir * T.v * dt;
+    const p0 = trainAt(T.s);
+    if (T.v > 20) for (let i = 0; i < T.n; i++) {
       const w = trainPos(i);
       for (let k = cars.length - 1; k >= 0; k--) { const c = cars[k]; if (Math.abs(c.x - w.x) > 80 || Math.abs(c.y - w.y) > 80) continue; if (dist(c.x, c.y, w.x, w.y) < 44) { if (c === player.car) { trainKill(); return; } cars.splice(k, 1); if (c === myCar) myCar = null; shake = Math.max(shake, 5); } }
       if (!player.car && dist(player.x, player.y, w.x, w.y) < 34) { trainKill(); return; }
       for (const q of peds) if (!q.ko && dist(q.x, q.y, w.x, w.y) < 36) { q.ko = 8; q.say = 'Aïe…'; q.sayT = 2; }
       for (const b of boars) if (!b.dead && dist(b.x, b.y, w.x, w.y) < 40) b.dead = 1;
     }
-    if (train.dir * (train.s - train.end) >= 0 || dist(p0.x, p0.y, p.x, p.y) > 7000) { train = null; trainCD = rand(70, 130); }
+    if (T.dir * (T.s - T.end) >= 0 || dist(p0.x, p0.y, p.x, p.y) > 7000) { train = null; trainCD = rand(25, 50); }
   }
   for (const x of xings) {
     let cl = false;
@@ -1450,13 +1467,21 @@ function drawRailStuff(scale, vx0, vx1, vy0, vy1) {
     ctx.fillStyle = '#f2f2e6'; ctx.fillRect(24, -7, 5, 2); ctx.fillRect(24, 5, 5, 2); ctx.restore();
   }
   if (train) {
-    for (let i = TLEN - 1; i >= 0; i--) {
+    for (let i = train.n - 1; i >= 0; i--) {
       const w = trainPos(i); if (w.x < vx0 - 60 || w.x > vx1 + 60 || w.y < vy0 - 60 || w.y > vy1 + 60) continue;
       ctx.save(); ctx.translate(w.x + 6, w.y + 8); ctx.rotate(w.a); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(-35, -16, 70, 32); ctx.restore();
       ctx.save(); ctx.translate(w.x, w.y); ctx.rotate(w.a + (train.dir < 0 ? Math.PI : 0));
-      ctx.fillStyle = '#f2f4f6'; ctx.fillRect(-35, -16, 70, 32); ctx.fillStyle = '#8cc63f'; ctx.fillRect(-35, 8, 70, 4); ctx.fillStyle = '#1d3f8f'; ctx.fillRect(-35, 12, 70, 4); ctx.fillStyle = '#1d3f8f'; ctx.fillRect(-35, -16, 70, 3); ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 2; ctx.strokeRect(-35, -16, 70, 32);
-      if (i === 0) { ctx.fillStyle = '#1d3f8f'; ctx.fillRect(24, -16, 11, 32); ctx.fillStyle = '#8cc63f'; ctx.fillRect(24, -3, 11, 6); ctx.fillStyle = '#7ad0ff'; ctx.fillRect(8, -10, 12, 20); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(34, -9, 3, 0, 7); ctx.arc(34, 9, 3, 0, 7); ctx.fill(); }
-      else { ctx.fillStyle = '#9fd3f2'; for (let q = -28; q < 28; q += 14) ctx.fillRect(q, -11, 9, 6), ctx.fillRect(q, 1, 9, 6); ctx.fillStyle = '#1d3f8f'; ctx.font = '700 7px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('TER', 0, 1); }
+      if (train.kind === 'fret') {
+        ctx.fillStyle = i === 0 ? '#c8791d' : ['#6b4f3a', '#4a5a6a', '#7a6a52', '#55606a'][i % 4]; ctx.fillRect(-35, -16, 70, 32); ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 2; ctx.strokeRect(-35, -16, 70, 32);
+        if (i === 0) { ctx.fillStyle = '#2b3140'; ctx.fillRect(24, -12, 10, 24); ctx.fillStyle = '#ffd23f'; ctx.fillRect(-35, -4, 20, 8); }
+        else { ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let q = -24; q <= 24; q += 12) { ctx.moveTo(q, -14); ctx.lineTo(q, 14); } ctx.stroke(); }
+      } else {
+        ctx.fillStyle = '#d3d7dc'; ctx.fillRect(-35, -16, 70, 32); ctx.fillStyle = '#f0d23c'; ctx.fillRect(-35, -16, 70, 6); ctx.fillRect(-35, 10, 70, 6);
+        ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 2; ctx.strokeRect(-35, -16, 70, 32);
+        ctx.fillStyle = '#aab0b8'; ctx.fillRect(-26, -6, 16, 12); ctx.fillRect(2, -6, 16, 12);
+        ctx.fillStyle = '#1fa3a3'; ctx.beginPath(); ctx.arc(-4, -1, 3.2, 0, 7); ctx.fill(); ctx.fillStyle = '#f0d23c'; ctx.beginPath(); ctx.arc(-1, 2, 2.6, 0, 7); ctx.fill();
+        if (i === 0) { ctx.fillStyle = '#2b3140'; ctx.fillRect(24, -12, 11, 24); ctx.fillStyle = '#7ad0ff'; ctx.fillRect(27, -9, 6, 18); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(34, -9, 2.2, 0, 7); ctx.arc(34, 9, 2.2, 0, 7); ctx.fill(); }
+      }
       ctx.restore();
     }
   }
@@ -1720,7 +1745,7 @@ function frame(ts) {
         const on = player.car && player.car.kind !== 'cheval' && !muted && !inside; engG.gain.value = on ? 0.015 + 0.03 * Math.min(1, Math.abs(player.car.v) / 370) : 0; eng.frequency.value = 45 + (player.car ? Math.abs(player.car.v) * 0.3 : 0);
         let nd = 1e9; if (!inside) for (const c of cars) if (c.type === 'cop' && c.chase) nd = Math.min(nd, dist(c.x, c.y, pp().x, pp().y));
         sirG.gain.value = (!muted && nd < 1200) ? 0.012 * (1 - nd / 1200) : 0; sir.frequency.value = Math.floor(time * 2) % 2 ? 720 : 960;
-        { let dn = 1e9; if (train && !inside) for (let i = 0; i < TLEN; i += 2) { const w = trainPos(i); dn = Math.min(dn, dist(w.x, w.y, pp().x, pp().y)); }
+        { let dn = 1e9; if (train && !inside && train.v > 5) for (let i = 0; i < train.n; i += 2) { const w = trainPos(i); dn = Math.min(dn, dist(w.x, w.y, pp().x, pp().y)); }
           trnG.gain.value = (!muted && dn < 1600) ? 0.03 * (1 - dn / 1600) : 0;
           let bn = 1e9; if (!inside) for (const x of xings) if (x.closed) bn = Math.min(bn, dist(x.x, x.y, pp().x, pp().y));
           bellG.gain.value = (!muted && bn < 900 && Math.floor(time * 5) % 2) ? 0.008 * (1 - bn / 900) : 0; }
