@@ -27,3 +27,13 @@ Exporte une zone depuis openstreetmap.org, puis `python3 tools/build_data.py map
 ## Crédits
 
 Données cartographiques © les contributeurs d'OpenStreetMap, licence ODbL : https://www.openstreetmap.org/copyright
+
+## Cartes
+
+- **Lamotte-Beuvron** (par défaut) : `index.html`
+- **Romorantin-Lanthenay** (à pied uniquement, accessible en train depuis la gare de Lamotte) : `index.html?map=romo`
+
+Les fichiers `data.json`, `data_romo.json` et `logo.png` doivent rester dans le même dossier que `index.html`.
+Les données de carte sont générées avec `tools/build_data.py SRC.osm OUT.json [poi.json]`.
+
+Carte : © les contributeurs d'OpenStreetMap (ODbL)

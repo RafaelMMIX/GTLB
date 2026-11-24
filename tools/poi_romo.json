@@ -1,0 +1,82 @@
+{
+ "manger": [
+  "Manger moins cher",
+  47.3673237,
+  1.7396767
+ ],
+ "cafe": [
+  "Nem'road",
+  47.3705227,
+  1.7383383
+ ],
+ "lycee": [
+  "Lycée général et technologique Claude de France",
+  47.3688323,
+  1.7402354
+ ],
+ "vieclaire": [
+  "La Vie Claire",
+  47.3708595,
+  1.7388097
+ ],
+ "ecole": [
+  "École élémentaire Les Tuileries",
+  47.3698386,
+  1.7368303
+ ],
+ "pauze": [
+  "La pauze gourmande",
+  47.3677989,
+  1.7406985
+ ],
+ "boucherie": [
+  "Boucherie",
+  47.3678154,
+  1.7410029
+ ],
+ "aldi": [
+  "ALDI",
+  47.3714185,
+  1.7389277
+ ],
+ "lycepro": [
+  "Lycée professionnel Denis Papin",
+  47.3686878,
+  1.7425798
+ ],
+ "stade": [
+  "Stade Jules Ladoumègue",
+  47.37037449166667,
+  1.7405660666666665
+ ],
+ "pyramide": [
+  "La Pyramide",
+  47.36771707692308,
+  1.7366860512820512
+ ],
+ "calmat": [
+  "Complexe Alain Calmat",
+  47.36851148181818,
+  1.7378469545454545
+ ],
+ "action": [
+  "Action",
+  47.37219894,
+  1.73845542
+ ],
+ "pharmacie": [
+  "Pharmacie de la Pyramide",
+  47.36736690833334,
+  1.7400195916666668
+ ],
+ "marie": [
+  "Marie Blachère",
+  47.37195756,
+  1.73826894
+ ],
+ "gare": [
+  "Gare du Faubourg d'Orléans",
+  47.3670275,
+  1.7401877
+ ]
+}

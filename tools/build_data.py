@@ -1,8 +1,10 @@
 import xml.etree.ElementTree as ET, math, json, sys, collections
-SRC=sys.argv[1] if len(sys.argv)>1 else 'map.osm'; OUT=sys.argv[2] if len(sys.argv)>2 else 'data.json'  # usage: python3 tools/build_data.py map.osm data.json
+# usage: python3 build_data.py SRC.osm OUT.json [poi.json]
+#   sans poi.json : points d'intérêt de Lamotte-Beuvron (intégrés) ; avec poi.json : {cle: [nom, lat, lon]}
+SRC=sys.argv[1] if len(sys.argv)>1 else 'map.osm'; OUT=sys.argv[2] if len(sys.argv)>2 else 'data.json'; POIFILE=sys.argv[3] if len(sys.argv)>3 else None
 r=ET.parse(SRC).getroot()
 bb=r.find('bounds').attrib
-lat0,lon0=47.611,2.031; kx=math.cos(lat0*math.pi/180)*111320; ky=110574
+lat0,lon0=((float(bb['minlat'])+float(bb['maxlat']))/2,(float(bb['minlon'])+float(bb['maxlon']))/2) if POIFILE else (47.611,2.031); kx=math.cos(lat0*math.pi/180)*111320; ky=110574
 def tags(e): return {x.get('k'):x.get('v') for x in e.findall('tag')}
 N={}
 for n in r.iter('node'): N[n.get('id')]=((float(n.get('lon'))-lon0)*kx, -(float(n.get('lat'))-lat0)*ky)
@@ -116,7 +118,7 @@ for wid,(ids,t) in W.items():
         if len(q)>=4: bld.append(flat(q))
     elif t.get('natural')=='water' and poly_ok(ids): water.append(flat(rdp(p,0.5)))
     elif t.get('waterway') in ('river','canal','stream','drain') and len(p)>1: wline.append([{'river':0,'canal':1,'stream':2,'drain':3}[t['waterway']],flat(rdp(p,1.0))])
-    elif t.get('railway')=='rail' and len(p)>1: rail.append(flat(rdp(p,0.8)))
+    elif t.get('railway') in ('rail','narrow_gauge') and len(p)>1: rail.append(flat(rdp(p,0.8)))
     else:
         k=t.get('leisure') or t.get('landuse') or t.get('natural')
         if k in GT and poly_ok(ids):
@@ -129,9 +131,11 @@ POI={'tatin':('Hôtel Tatin',-569,1870),'mairie':('Mairie',-428,1037),'gare':('G
 'carrefour':('Carrefour Market',-309,1199),'pompiers':('Pompiers',21,911),'parc':('Parc Équestre Fédéral',-1449,1047),'hopital':('Institut Médical de Sologne',-253,2181),
 'mediatheque':('Médiathèque',-174,621),'boulangerie':('Boulangerie Fleury',-467,1105),'cinema':('Cinéma Le N3',-491,1579),'etang':('Étang de la Cimbaudière',-2021,1164),
 'salle':('Salle omnisports',-124,453),'marche':('Place du Marché',-607,1014),'fetes':('Salle des fêtes',-400,1385),'ecole':('École Émile Morin',-344,701)}
+if POIFILE:
+    POI={k:(v[0],(v[2]-lon0)*kx,-(v[1]-lat0)*ky) for k,v in json.load(open(POIFILE,encoding='utf8')).items()}
 segs=[]
 for wid,(ids,t) in W.items():
-    if t.get('highway') in DR or t.get('highway') in ('service','track'):
+    if t.get('highway') in DR or t.get('highway') in ('service','track','footway','cycleway','path'):
         p=coords(ids)
         for a,b in zip(p,p[1:]): segs.append((a,b))
 def snap(x,y):

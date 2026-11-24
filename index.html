@@ -120,6 +120,7 @@
     #bR{right:146px;bottom:98px}
   }
   @media (pointer:coarse) and (orientation:portrait){#rotate{display:flex}}
+body.foot #bB,body.foot #bH,body.foot #bV,body.foot #bR{display:none!important}
 </style>
 </head>
 <body>
@@ -156,12 +157,12 @@
     <h2>Version 0.6 · téléphone et chevaux</h2>
     <div class="box panel">
       <div class="kbdonly"><kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> ou <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> : marcher / conduire</div>
-      <div class="kbdonly"><kbd>E</kbd> : monter / descendre d'une voiture</div>
-      <div class="kbdonly"><kbd>E</kbd> devant une porte (cercle de couleur) : entrer dans l'Hôtel Tatin, le garage, la boutique</div>
+      <div class="kbdonly" id="tipCar"><kbd>E</kbd> : monter / descendre d'une voiture</div>
+      <div class="kbdonly" id="tipDoor"><kbd>E</kbd> devant une porte (cercle de couleur) : entrer dans l'Hôtel Tatin, le garage, la boutique</div>
       <div class="kbdonly"><kbd>T</kbd> : téléphone (Lamotte-Gram, GPS, taxi, banque…) · <kbd>R</kbd> : radio (en voiture) · <kbd>V</kbd> : appeler ta voiture · <kbd>Tab</kbd> : grande carte (ou clic sur la mini-carte)</div>
       <div class="kbdonly"><kbd>Espace</kbd> : frein à main · <kbd>H</kbd> : klaxon · <kbd>Maj</kbd> : courir · <kbd>M</kbd> : son</div>
       <div class="touchonly">Joystick à gauche pour bouger · <b>E</b> : monter / entrer · <b>FREIN</b>, <b>KLAXON</b>, <b>VOITURE</b>, <b>RADIO</b> à droite · 📱 téléphone · touche la mini-carte pour l'agrandir</div>
-      <div style="margin-top:8px;color:#ffe08a">Entre dans l'Hôtel Tatin (rond jaune) et parle à Mme Tatin pour prendre une mission. Attention aux gendarmes.</div>
+      <div id="tipMain" style="margin-top:8px;color:#ffe08a">Entre dans l'Hôtel Tatin (rond jaune) et parle à Mme Tatin pour prendre une mission. Attention aux gendarmes.</div>
       <div style="margin-top:6px;font-size:12px;opacity:.7">Carte : © les contributeurs d'OpenStreetMap (ODbL)</div>
     </div>
     <div class="go wait" id="goBtn">Chargement de la carte…</div>
@@ -212,7 +213,9 @@ const KINDS = {
 const PAINT = ['#e03a2e', '#2980b9', '#27ae60', '#f1c40f', '#8e44ad', '#ecf0f1', '#e67e22', '#2c3e50'];
 const OUTFITS = [['Jaune soleil', '#ffd23f', 0], ['Vert Sologne', '#3f8f4a', 30], ['Rouge tomate', '#d9402f', 30], ['Bleu étang', '#3b7bbf', 30], ['Violet', '#8e5bb5', 30], ['Blanc', '#f2f2f2', 30], ['Noir', '#2a2a2e', 40]];
 const HATS = [['none', 'Aucun', 0], ['beret', 'Béret', 40], ['casquette', 'Casquette', 40], ['cowboy', 'Chapeau du Parc Équestre', 80]];
-const HOT = ['marche', 'gare', 'mairie', 'boulangerie', 'carrefour', 'college', 'eglise'];
+const MAPID = /[?&]map=romo/i.test(location.search) ? 'romo' : 'lamotte', FOOT = MAPID === 'romo', ARR = /[?&]arr=1/.test(location.search), HUBID = FOOT ? 'lycee' : 'tatin', GIVER = FOOT ? 'M. Lenoir' : 'Mme Tatin';
+if (FOOT) document.body.classList.add('foot');
+const HOT = FOOT ? ['lycee', 'lycepro', 'gare', 'pauze', 'aldi', 'cafe', 'marie', 'stade'] : ['marche', 'gare', 'mairie', 'boulangerie', 'carrefour', 'college', 'eglise'];
 const ks = c => KINDS[c.kind] || KINDS.berline;
 let D = null, loaded = false;
 let roads = [], roadOrder = [], blds = [], waters = [], greens = [], forests = [], wlines = [], rails = [], POI = {}, solids = [];
@@ -449,12 +452,12 @@ let save = safe(() => JSON.parse(localStorage.getItem('glb_save') || '{}'), {});
 save.owned = save.owned || ['berline']; save.kind = save.kind || 'berline'; save.color = save.color || '#e03a2e'; save.outfit = save.outfit || '#ffd23f'; save.hat = save.hat || 'none';
 save.ownedOutfits = save.ownedOutfits || ['#ffd23f']; save.ownedHats = save.ownedHats || ['none'];
 save.bank = save.bank || 0; save.ach = save.ach || {}; save.st = Object.assign({ crimes: 0, boars: 0, missions: 0, gigs: 0, robs: 0, photos: 0, busted: 0, train: 0, brave: 0, horseT: 0, km: 0, play: 0 }, save.st || {});
-function persist() { save.mi = mi; safe(() => { localStorage.setItem('glb_save', JSON.stringify(save)); localStorage.setItem('glb_money', money); }); }
-let wanted = 0, lastCrime = -99, evade = 0, bust = 0, time = 0, gameMin = 8 * 60, hubCD = 0, mi = save.mi || 0, mission = null, cam = { x: 0, y: 0 }, shake = 0, bustedUntil = 0, popT = 0, nameT = 0, streetName = '';
+function persist() { if (FOOT) save.miR = mi; else save.mi = mi; safe(() => { localStorage.setItem('glb_save', JSON.stringify(save)); localStorage.setItem('glb_money', money); }); }
+let wanted = 0, lastCrime = -99, evade = 0, bust = 0, time = 0, gameMin = 8 * 60, hubCD = 0, mi = (FOOT ? save.miR : save.mi) || 0, mission = null, cam = { x: 0, y: 0 }, shake = 0, bustedUntil = 0, popT = 0, nameT = 0, streetName = '';
 let phoneOpen = false, phoneApp = 'home', wp = null, feed = [], smsList = [], smsUnread = 0, welcomed = false, smsRand = 200, achT = 1, lastGramCrime = -99;
 let boars = [], boarCD = 5, train = null, trainCD = 12, tpath = null, xings = [], buff = { foot: 0, car: 0, pay: 0 }, radioSt = 0, flashT = 0, flashTxt = '', flashCD = 0, flashRand = 30, robCD = {}, robbedNow = false, radioNext = 0, radioStep = 0, radioWas = false;
 let floaters = [], fcops = [], heli = null, blockT = 0, myCar = null, vehicleDirty = false, shopOpen = false, shopKind = '', inside = null;
-const MISSIONS = [
+const MISSIONS_L = [
   { title: 'La tarte du concours', say: 'Mme Tatin : « Le concours de la tarte Tatin est ce soir ! Porte cette tarte à la mairie, vite ! »', done: 'La mairie est ravie. Le concours aura bien lieu !', steps: [{ poi: 'mairie', txt: 'Livre la tarte Tatin à la mairie' }], pay: 120 },
   { title: 'Cahiers en retard', say: 'Mme Tatin : « Le collège attend les cahiers de mon neveu. La cloche va sonner ! »', done: 'Juste à temps pour la cloche.', steps: [{ poi: 'college', txt: 'Dépose les cahiers au collège Jean Rostand' }], pay: 100 },
   { title: 'Rallye de Sologne', race: true, say: 'Mme Tatin : « Le rallye du village ! Passe tous les points avant la fin du chrono. Chaque point te rend un peu de temps. »', done: 'Tu as gagné le rallye de Sologne !', steps: [{ poi: 'gare', txt: 'Point 1 : la gare' }, { poi: 'eglise', txt: 'Point 2 : l\'église Sainte-Anne' }, { poi: 'mairie', txt: 'Point 3 : la mairie' }, { poi: 'tatin', txt: 'Arrivée : devant l\'Hôtel Tatin' }], pay: 400 },
@@ -467,6 +470,21 @@ const MISSIONS = [
   { title: 'Pizza pour les pompiers', say: 'Mme Tatin : « Les pompiers veulent des pizzas. Va leur en porter ! »', done: 'Les pompiers sont aux anges.', steps: [{ poi: 'pompiers', txt: 'Livre les pizzas aux pompiers' }], pay: 220 },
   { title: 'Séance spéciale', say: 'Mme Tatin : « Le cinéma Le N3 a besoin de ma tarte pour la séance de ce soir. »', done: 'Séance sauvée. Popcorn offert.', steps: [{ poi: 'cinema', txt: 'Livre la tarte au cinéma Le N3' }], pay: 150 }
 ];
+const MISSIONS_R = [
+  { title: 'Copies à porter', say: 'M. Lenoir : « Ces copies de philo doivent être au lycée Denis Papin avant la sonnerie. Cours ! »', done: 'Les copies sont arrivées. Les élèves de Papin sont soulagés.', steps: [{ poi: 'lycepro', txt: 'Dépose les copies au lycée Denis Papin' }], pay: 120 },
+  { title: 'Sandwich du proviseur', say: 'M. Lenoir : « Ma réunion dure jusqu\'à 14 h et je n\'ai rien mangé. Un sandwich à La pauze gourmande, vite ! »', done: 'Le proviseur mange en cachette. Personne n\'a rien vu.', steps: [{ poi: 'pauze', txt: 'Achète le sandwich à La pauze gourmande' }, { poi: 'lycee', txt: 'Rapporte-le au lycée' }], pay: 170 },
+  { title: 'Les maillots du match', say: 'M. Lenoir : « Le match inter-classes commence au stade Ladoumègue. Les maillots sont restés au lycée ! »', done: 'Match sauvé. Les 3e B gagnent (ils trichent).', steps: [{ poi: 'stade', txt: 'Apporte les maillots au stade Jules Ladoumègue' }], pay: 200 },
+  { title: 'Rallye des délégués', race: true, say: 'M. Lenoir : « Le rallye des délégués de classe ! Passe tous les points avant la fin du chrono. Chaque point te rend un peu de temps. »', done: 'Tu as gagné le rallye des délégués !', steps: [{ poi: 'lycepro', txt: 'Point 1 : le lycée Denis Papin' }, { poi: 'stade', txt: 'Point 2 : le stade Ladoumègue' }, { poi: 'calmat', txt: 'Point 3 : le complexe Alain Calmat' }, { poi: 'lycee', txt: 'Arrivée : devant le lycée' }], pay: 220, bonus: 25 },
+  { title: 'Ordonnance urgente', say: 'M. Lenoir : « Mme Garnier, la CPE, a besoin de ses médicaments. Passe à la pharmacie de la Pyramide et reviens ! »', done: 'La CPE respire enfin. Merci !', steps: [{ poi: 'pharmacie', txt: 'Récupère l\'ordonnance à la pharmacie' }, { poi: 'lycee', txt: 'Retourne au lycée' }], pay: 260 },
+  { title: 'Courses de la cantine', say: 'M. Lenoir : « La cantine n\'a plus rien ! Fonce chez ALDI puis à La Vie Claire, et reviens ! »', done: 'La cantine est sauvée. Les élèves vont quand même se plaindre.', steps: [{ poi: 'aldi', txt: 'Fais le plein chez ALDI' }, { poi: 'vieclaire', txt: 'Prends les produits bio à La Vie Claire' }, { poi: 'lycee', txt: 'Rapporte les courses au lycée' }], pay: 420 },
+  { title: 'Les livres des petits', say: 'M. Lenoir : « L\'école des Tuileries attend des livres de lecture. Tu les déposes ? »', done: 'Les petits sont ravis. L\'un d\'eux veut ton autographe.', steps: [{ poi: 'ecole', txt: 'Dépose les livres à l\'école Les Tuileries' }], pay: 260 },
+  { title: 'Farce de terminale', say: 'M. Lenoir : « Les terminales ont "emprunté" la mascotte du lycée pro. Récupère-la, discrètement… enfin, façon de parler. »', done: 'Mascotte rendue. Les terminales sont démasqués.', steps: [{ poi: 'lycepro', txt: 'Reprends la mascotte au lycée Denis Papin', crime: 1, crimeTxt: 'Vol de la mascotte !' }, { poi: 'lycee', txt: 'Ramène la mascotte au lycée' }], pay: 380 },
+  { title: 'Sujet confidentiel', clean: true, say: 'M. Lenoir : « Le sujet du bac blanc doit arriver au lycée Denis Papin… sans te faire repérer par les gendarmes ! »', done: 'Sujet livré. Personne n\'a rien vu.', steps: [{ poi: 'lycepro', txt: 'Livre le sujet du bac blanc (reste discret)' }], pay: 340 },
+  { title: 'Nems pour la classe', say: 'M. Lenoir : « La 1ère S a eu 20 de moyenne : récompense-les avec des nems de chez Nem\'road ! »', done: 'La classe applaudit. Les nems aussi.', steps: [{ poi: 'cafe', txt: 'Achète les nems chez Nem\'road' }, { poi: 'lycee', txt: 'Livre-les au lycée' }], pay: 300 },
+  { title: 'Sortie à la Pyramide', say: 'M. Lenoir : « Les BTS organisent une sortie à La Pyramide. Apporte-leur les autorisations signées ! »', done: 'Sortie validée. Les BTS partent en bus.', steps: [{ poi: 'pyramide', txt: 'Apporte les autorisations à La Pyramide' }], pay: 280 },
+  { title: 'Gâteaux du bac', say: 'M. Lenoir : « Pour les profs surveillants : des viennoiseries chez Marie Blachère. Vite, avant l\'épreuve ! »', done: 'Les surveillants sont de bonne humeur. Étonnant.', steps: [{ poi: 'marie', txt: 'Achète les viennoiseries chez Marie Blachère' }, { poi: 'lycee', txt: 'Livre-les au lycée' }], pay: 460 }
+];
+const MISSIONS = FOOT ? MISSIONS_R : MISSIONS_L;
 let hub = { x: 0, y: 0 };
 const pp = () => player.car || player;
 const CARCOL = ['#c0392b', '#2980b9', '#27ae60', '#f1c40f', '#8e44ad', '#ecf0f1', '#e67e22', '#34495e', '#16a085', '#7f8c8d'];
@@ -528,9 +546,9 @@ function ensurePop(init) {
   for (const q of peds) if (dist(q.x, q.y, p.x, p.y) < 2800) np++;
   const tries = init ? 50 : 3;
   for (let k = 0; k < tries; k++) {
-    if (traffic < 20) { const c = trafficAt(pick(), 'civ'); if (c) { cars.push(c); traffic++; } }
-    if (parked < 14) { const c = parkedAt(pick()); if (c) { cars.push(c); parked++; } }
-    if (patrol < 2 && (init || Math.random() < 0.3)) { const ring2 = nodesInRing(p.x, p.y, 2000, 3500); if (ring2.length) { const c = trafficAt(ring2[randInt(0, ring2.length - 1)], 'cop'); if (c) { cars.push(c); patrol++; } } }
+    if (!FOOT && traffic < 20) { const c = trafficAt(pick(), 'civ'); if (c) { cars.push(c); traffic++; } }
+    if (!FOOT && parked < 14) { const c = parkedAt(pick()); if (c) { cars.push(c); parked++; } }
+    if (!FOOT && patrol < 2 && (init || Math.random() < 0.3)) { const ring2 = nodesInRing(p.x, p.y, 2000, 3500); if (ring2.length) { const c = trafficAt(ring2[randInt(0, ring2.length - 1)], 'cop'); if (c) { cars.push(c); patrol++; } } }
     if (np < 52) { let q = null; if (hots.length && Math.random() < 0.65) q = pedNear(hots[randInt(0, hots.length - 1)]); else q = pedAt(pick()); if (q) { peds.push(q); np++; } }
   }
 }
@@ -556,6 +574,7 @@ function snapRoad(x, y) {
 }
 let carCD = 0;
 function callCar() {
+  if (FOOT) { toast('Pas de voiture à Romorantin : tout se fait à pied !', 2.2); return; }
   if (inside || shopOpen) return;
   if (player.car) { toast('Tu es déjà dans une voiture.', 1.6); return; }
   if (time < carCD) { toast('Patiente un instant…', 1.4); return; }
@@ -575,23 +594,35 @@ function spawnMyCar(x, y, a) {
   if (myCar) { const i = cars.indexOf(myCar); if (i >= 0 && myCar !== player.car) cars.splice(i, 1); }
   const c = newCar(x, y, 'civ', save.kind); c.color = save.color; c.a = a; c.owned = true; c.mine = true; myCar = c; cars.push(c); return c;
 }
-const PLACES = {
+const PLACES = FOOT ? {
+  lycee: { name: 'Lycée Claude de France', kind: 'school', col: '#ffd23f', poi: 'lycee', keep: true },
+  lycepro: { name: 'Lycée Denis Papin', kind: 'school', col: '#f0a030', poi: 'lycepro', keep: true },
+  gare: { name: 'Gare du Faubourg d’Orléans', kind: 'station', col: '#7d8da1', poi: 'gare', keep: true },
+  action: { name: 'Action', kind: 'shop', col: '#ff6fb5', poi: 'action', keep: true },
+  pauze: { name: 'La pauze gourmande', kind: 'bakery', col: '#e0a040', poi: 'pauze', keep: true },
+  marie: { name: 'Marie Blachère', kind: 'bakery', col: '#d98a3a', poi: 'marie', keep: true },
+  aldi: { name: 'ALDI', kind: 'market', col: '#2a6fc0', poi: 'aldi', keep: true },
+  vieclaire: { name: 'La Vie Claire', kind: 'market', col: '#4aa05a', poi: 'vieclaire', keep: true },
+  manger: { name: 'Manger moins cher', kind: 'market', col: '#e0483a', poi: 'manger', keep: true }
+} : {
   tatin: { name: 'Hôtel Tatin', kind: 'hotel', col: '#ffd23f' },
   garage: { name: 'Garage de la Sologne', kind: 'garage', col: '#ff8a3d', xy: [-959, 2544] },
   boutique: { name: 'Boutique du centre', kind: 'shop', col: '#ff6fb5', xy: [-444, 969] },
   boulangerie: { name: 'Boulangerie', kind: 'bakery', col: '#e0a040', poi: 'boulangerie' },
   intermarche: { name: 'Intermarché', kind: 'market', col: '#e0483a', poi: 'intermarche' },
-  carrefour: { name: 'Carrefour Market', kind: 'market', col: '#3a8de0', poi: 'carrefour' }
+  carrefour: { name: 'Carrefour Market', kind: 'market', col: '#3a8de0', poi: 'carrefour' },
+  gare: { name: 'Gare de Lamotte-Beuvron', kind: 'station', col: '#7d8da1', poi: 'gare', keep: true }
 };
 function initWorld() {
-  const t = POI.tatin; hub = { x: t.sx, y: t.sy };
-  Object.assign(PLACES.tatin, { x: t.sx, y: t.sy, a: t.a });
-  for (const id of ['garage', 'boutique']) { const q = PLACES[id], sn = snapRoad(q.xy[0] * S, q.xy[1] * S); q.x = sn.x; q.y = sn.y; q.a = sn.a; }
-  for (const id in PLACES) { const q = PLACES[id]; if (q.poi && POI[q.poi]) { const o = POI[q.poi]; q.x = o.sx; q.y = o.sy; q.a = o.a; q.name = o.name || q.name; } else if (q.poi) delete PLACES[id]; }
-  const a = t.a, ax = Math.cos(a), ay = Math.sin(a), nx = -ay, ny = ax;
-  player.x = hub.x + ax * 125 + nx * 56; player.y = hub.y + ay * 125 + ny * 56; { const r = pushOut(player.x, player.y, 12); if (r) { player.x = r.x; player.y = r.y; } }
+  const t = POI[HUBID]; hub = { x: t.sx, y: t.sy };
+  Object.assign(PLACES[HUBID], { x: t.sx, y: t.sy, a: t.a });
+  for (const id of ['garage', 'boutique']) { const q = PLACES[id]; if (!q) continue; const sn = snapRoad(q.xy[0] * S, q.xy[1] * S); q.x = sn.x; q.y = sn.y; q.a = sn.a; }
+  for (const id in PLACES) { const q = PLACES[id]; if (q.poi && POI[q.poi]) { const o = POI[q.poi]; q.x = o.sx; q.y = o.sy; q.a = o.a; if (!q.keep) q.name = o.name || q.name; } else if (q.poi && id !== HUBID) delete PLACES[id]; }
+  const g = ((FOOT || ARR) && PLACES.gare) ? PLACES.gare : { x: hub.x, y: hub.y, a: t.a };
+  const a = g.a, ax = Math.cos(a), ay = Math.sin(a), nx = -ay, ny = ax;
+  player.x = g.x + ax * 125 + nx * 56; player.y = g.y + ay * 125 + ny * 56; { const r = pushOut(player.x, player.y, 12); if (r) { player.x = r.x; player.y = r.y; } }
   cam.x = player.x; cam.y = player.y; player.a = a;
-  spawnMyCar(hub.x + ax * 150 + nx * 38, hub.y + ay * 150 + ny * 38, a);
+  if (!FOOT) spawnMyCar(g.x + ax * 150 + nx * 38, g.y + ay * 150 + ny * 38, a);
   ensurePop(true);
 }
 
@@ -687,7 +718,7 @@ function updateCar(c, dt) {
 function updatePlayerFoot(dt) {
   const inp = getInput(), m = Math.hypot(inp.x, inp.y);
   if (m > 0.05) {
-    const sp = (inp.sprint ? 105 : 75) * (buff.foot > 0 ? 1.4 : 1), dx = inp.x / Math.max(1, m), dy = -inp.y / Math.max(1, m);
+    const sp = (inp.sprint ? 105 : 75) * (buff.foot > 0 ? 1.4 : 1) * (FOOT ? 1.2 : 1), dx = inp.x / Math.max(1, m), dy = -inp.y / Math.max(1, m);
     player.x += dx * sp * dt; player.y += dy * sp * dt; player.a += angDiff(player.a, Math.atan2(dy, dx)) * Math.min(1, 14 * dt);
   }
   const r = pushOut(player.x, player.y, player.r); if (r) { player.x = r.x; player.y = r.y; }
@@ -723,6 +754,10 @@ function saySomething(q, dp) {
   else pool = ['Bonjour !', 'Belle journée en Sologne.', 'Ça sent la tarte Tatin…', 'Vous avez vu le tracteur ?', 'Je vais au marché.', "Il y a du monde aujourd'hui.", 'Les gendarmes sont sympas ici.', 'Pas trop vite sur la route !', 'Un petit café ?'];
   q.say = pool[randInt(0, pool.length - 1)]; q.sayT = 3; q.sayCD = rand(7, 16);
 }
+function spawnFootCop() {
+  const p = pp(); let ring = nodesInRing(p.x, p.y, 600, 1100); if (!ring.length) ring = nodesInRing(p.x, p.y, 300, 2500); if (!ring.length) return;
+  const n = ring[randInt(0, ring.length - 1)]; fcops.push({ x: gX[n], y: gY[n], a: 0, hold: false });
+}
 function spawnBlock() {
   const p = pp(), hd = player.car ? player.car.a : player.a, hx = Math.cos(hd), hy = Math.sin(hd);
   const all = nodesInRing(p.x, p.y, 700, 1300), fw = k => all.filter(n => ((gX[n] - p.x) * hx + (gY[n] - p.y) * hy) > k * dist(gX[n], gY[n], p.x, p.y));
@@ -746,7 +781,7 @@ function updateWorld(dt) {
   if (player.car && player.car.kind === 'cheval') save.st.horseT += dt;
   for (const x of xings) if (x.closed && dist(x.x, x.y, p.x, p.y) < 30) save.st.brave += dt;
   if (wp && dist(p.x, p.y, wp.x, wp.y) < 110) { wp = null; toast('📍 Tu es arrivé à destination.', 2); }
-  if (!welcomed) { welcomed = true; sms('Mme Tatin', 'Bienvenue à Lamotte-Beuvron ! Passe à l’hôtel quand tu veux, j’ai des tartes à livrer. Appuie sur T pour ouvrir ton téléphone.'); }
+  if (!welcomed) { welcomed = true; if (FOOT) sms('M. Lenoir', 'Bienvenue à Romorantin ! Passe au lycée quand tu veux, on a des petits services à te confier. Appuie sur T pour ouvrir ton téléphone.'); else if (ARR) { sms('Mme Tatin', 'Content de te revoir à Lamotte-Beuvron ! Passe à l’hôtel pour d’autres tartes.'); } else sms('Mme Tatin', 'Bienvenue à Lamotte-Beuvron ! Passe à l’hôtel quand tu veux, j’ai des tartes à livrer. Appuie sur T pour ouvrir ton téléphone.'); }
   smsRand -= dt; if (smsRand <= 0) { smsRand = rand(240, 420); const r = RSMS[randInt(0, RSMS.length - 1)]; sms(r[0], r[1]); }
   achT -= dt; if (achT <= 0) { achT = 1; checkAch(); }
   flashCD -= dt; flashT -= dt; flashRand -= dt; if (flashRand <= 0) { flashRand = rand(45, 80); radioFlash(JOKES[randInt(0, JOKES.length - 1)]); }
@@ -787,10 +822,10 @@ function updateWorld(dt) {
   // recherche
   const chasers = cars.filter(c => c.type === 'cop' && c.chase);
   if (wanted > 0) {
-    if (chasers.length < Math.min(wanted + 1, 6) && Math.random() < dt * 0.9) spawnChaser();
+    if (FOOT) { if (fcops.length < Math.min(wanted + 2, 7) && Math.random() < dt * 0.5) spawnFootCop(); } else if (chasers.length < Math.min(wanted + 1, 6) && Math.random() < dt * 0.9) spawnChaser();
     for (const c of chasers) { c.exitCD -= dt; if (c.exitCD <= 0 && fcops.length < 6 && dist(c.x, c.y, p.x, p.y) < 140 && (!player.car || Math.abs(player.car.v) < 70)) { c.exitCD = 9; c.v = 0; fcops.push({ x: c.x + Math.cos(c.a + 1.57) * 22, y: c.y + Math.sin(c.a + 1.57) * 22, a: 0, hold: false }); } }
     blockT -= dt;
-    if (wanted >= 2 && blockT <= 0) { let nb = 0; for (const c of cars) if (c.block && dist(c.x, c.y, p.x, p.y) < 2600) nb++; blockT = (nb / 2 < (wanted >= 4 ? 2 : 1)) ? (spawnBlock() ? 22 : 4) : 5; }
+    if (!FOOT && wanted >= 2 && blockT <= 0) { let nb = 0; for (const c of cars) if (c.block && dist(c.x, c.y, p.x, p.y) < 2600) nb++; blockT = (nb / 2 < (wanted >= 4 ? 2 : 1)) ? (spawnBlock() ? 22 : 4) : 5; }
     for (let i = cars.length - 1; i >= 0; i--) if (cars[i].block && dist(cars[i].x, cars[i].y, p.x, p.y) > 2800) cars.splice(i, 1);
     for (const f of fcops) {
       const d = dist(f.x, f.y, p.x, p.y);
@@ -799,14 +834,14 @@ function updateWorld(dt) {
       const r = pushOut(f.x, f.y, 7); if (r) { f.x = r.x; f.y = r.y; }
     }
     fcops = fcops.filter(f => dist(f.x, f.y, p.x, p.y) < 2000);
-    if (wanted >= 4) {
+    if (wanted >= 4 && !FOOT) {
       if (!heli) { const a0 = rand(0, 6.28); heli = { x: p.x + Math.cos(a0) * 1500, y: p.y + Math.sin(a0) * 1500, a: 0, rot: 0 }; toast('🚁 Un hélicoptère te traque ! Cache-toi en forêt…', 3.6); radioFlash('Un hélicoptère survole Lamotte-Beuvron à la recherche d’un fugitif.', true); gramEvent('heli'); }
       const d = dist(heli.x, heli.y, p.x, p.y), sp = Math.min(330, d * 1.4 + 30); heli.a = Math.atan2(p.y - heli.y, p.x - heli.x);
       if (d > 40) { heli.x += Math.cos(heli.a) * sp * dt; heli.y += Math.sin(heli.a) * sp * dt; } heli.rot += dt * 25;
     } else heli = null;
     let nearest = 1e9; for (const c of chasers) nearest = Math.min(nearest, dist(c.x, c.y, p.x, p.y)); for (const f of fcops) nearest = Math.min(nearest, dist(f.x, f.y, p.x, p.y));
     const hidden = !heli || inForest(p.x, p.y);
-    if (nearest > 1100 && hidden) evade += dt; else if (!hidden) evade = 0; else evade = Math.max(0, evade - dt * 0.5);
+    if (nearest > (FOOT ? 650 : 1100) && hidden) evade += dt; else if (!hidden) evade = 0; else evade = Math.max(0, evade - dt * 0.5);
     if (evade > 12) { evade = 0; wanted--; toast(wanted ? 'Les gendarmes perdent un peu ta trace…' : '✔ Tu as semé la police !'); if (!wanted) for (const c of chasers) toPatrol(c); }
     for (const c of chasers) if (dist(c.x, c.y, p.x, p.y) > 2800) cars.splice(cars.indexOf(c), 1);
     let near = false;
@@ -835,7 +870,7 @@ function spawnThief() {
 }
 function startMission(cdef) {
   const def = cdef || MISSIONS[mi % MISSIONS.length]; let px = hub.x, py = hub.y, tot = 25;
-  const steps = def.steps.map(st => { if (st.catch) return st; const o = POI[st.poi], pos = st.poi === 'tatin' ? hub : { x: o.sx, y: o.sy }; tot += dist(px, py, pos.x, pos.y) / S * 1.7 / 16 + 10; px = pos.x; py = pos.y; return Object.assign({}, st, { x: pos.x, y: pos.y }); });
+  const steps = def.steps.map(st => { if (st.catch) return st; const o = POI[st.poi], pos = st.poi === HUBID ? hub : { x: o.sx, y: o.sy }; tot += dist(px, py, pos.x, pos.y) / S * 1.7 / (FOOT ? 8 : 16) + 10; px = pos.x; py = pos.y; return Object.assign({}, st, { x: pos.x, y: pos.y }); });
   mission = { def, steps, step: 0, left: def.time || Math.round(tot + (def.bonus || 0)), thief: null, to: { x: 0, y: 0 } };
   if (def.chase) spawnThief(); else setTarget();
   toast(def.say || ('Mission : ' + def.title), 6);
@@ -846,7 +881,7 @@ function completeStep() {
   m.step++;
   if (m.step >= m.steps.length) {
     const k = m.def.gig ? 1 : 1 + Math.floor(mi / MISSIONS.length) * 0.5, pay = Math.round(m.def.pay * k * (buff.pay > 0 ? 1.5 : 1)) + (m.def.race ? Math.floor(Math.max(0, m.left)) * 3 : 0);
-    money += pay; if (m.thief) m.thief.thief = false; if (m.def.gig) save.st.gigs++; else { mi++; save.st.missions++; sms('Mme Tatin', 'Bravo pour « ' + m.def.title + ' » ! Reviens me voir, j’ai d’autres tartes à livrer.'); } gramEvent(m.def.gig ? 'gig' : 'mission', m.def.title); persist();
+    money += pay; if (m.thief) m.thief.thief = false; if (m.def.gig) save.st.gigs++; else { mi++; save.st.missions++; sms(GIVER, 'Bravo pour « ' + m.def.title + ' » ! ' + (FOOT ? 'Passe me voir au lycée, j’ai d’autres services à te demander.' : 'Reviens me voir, j’ai d’autres tartes à livrer.')); } gramEvent(m.def.gig ? 'gig' : 'mission', m.def.title); persist();
     toast('✔ ' + (m.def.done || 'Mission réussie !') + ' +' + pay + ' €', 4.5); radioFlash('Bravo ! Un habitant de Lamotte-Beuvron a mené sa mission à bien.'); mission = null; shake = Math.max(shake, 4);
   } else { if (m.def.race) m.left += 10; toast('✔ Point validé ! ' + (m.def.race ? '+10 s' : ''), 1.8); setTarget(); }
 }
@@ -857,9 +892,9 @@ function doBusted() {
   for (const c of cars) { if (c.type === 'cop' && c.chase) toPatrol(c); if (c.block) { c.block = false; toPatrol(c); } }
   if (player.car) { player.car.v = 0; player.car = null; }
   if (mission && mission.thief) mission.thief.thief = false; mission = null;
-  const g = POI.gendarmerie; player.x = g.sx; player.y = g.sy; { const r = pushOut(player.x, player.y, 10); if (r) { player.x = r.x; player.y = r.y; } }
+  const g = POI.gendarmerie || POI.lycee; player.x = g.sx; player.y = g.sy; { const r = pushOut(player.x, player.y, 10); if (r) { player.x = r.x; player.y = r.y; } }
   bustedUntil = time + 3.2;
-  $('busted').style.display = 'flex'; $('busted').querySelector('p').textContent = 'Amende : ' + fine + ' €. Direction la gendarmerie…';
+  $('busted').style.display = 'flex'; $('busted').querySelector('p').textContent = 'Amende : ' + fine + (POI.gendarmerie ? ' €. Direction la gendarmerie…' : ' €. On te dépose devant le lycée…');
 }
 
 /* ---------- rendu ---------- */
@@ -976,9 +1011,9 @@ function drawWorld(scale) {
       lamp(gX[i] - ay * 56 - ax * 44, gY[i] + ax * 56 - ay * 44, lightFor(i, nodeAxis[i] + 1.5708));
     }
   }
-  if (!mission) marker(hub.x, hub.y, '#ffd23f', 'HÔTEL TATIN · MISSIONS'); else marker(mission.to.x, mission.to.y, '#ff8a3d', mission.steps[mission.step].catch ? 'LE VOLEUR' : 'DESTINATION');
+  if (!mission) marker(hub.x, hub.y, '#ffd23f', FOOT ? 'LYCÉE · MISSIONS' : 'HÔTEL TATIN · MISSIONS'); else marker(mission.to.x, mission.to.y, '#ff8a3d', mission.steps[mission.step].catch ? 'LE VOLEUR' : 'DESTINATION');
   for (const id in PLACES) {
-    if (id === 'tatin') continue; const q = PLACES[id]; if (q.x < vx0 - 100 || q.x > vx1 + 100 || q.y < vy0 - 100 || q.y > vy1 + 100) continue;
+    if (id === HUBID) continue; const q = PLACES[id]; if (q.x < vx0 - 100 || q.x > vx1 + 100 || q.y < vy0 - 100 || q.y > vy1 + 100) continue;
     ctx.fillStyle = q.col + '44'; ctx.beginPath(); ctx.arc(q.x, q.y, 46, 0, 7); ctx.fill(); ctx.strokeStyle = q.col; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(q.x, q.y, 46, 0, 7); ctx.stroke();
     ctx.font = '800 ' + (14 / scale) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.strokeText(q.name.toUpperCase(), q.x, q.y - 60); ctx.fillStyle = q.col; ctx.fillText(q.name.toUpperCase(), q.x, q.y - 60);
   }
@@ -1057,10 +1092,10 @@ function drawBigMap() {
   const pos = (x, y) => [W / 2 + ((x / S - MX0) * BS - bigV.cx) * s, H / 2 + ((y / S - MY0) * BS - bigV.cy) * s];
   const lab = (x, y, col, t, r) => { const [px, py] = pos(x, y); g.fillStyle = col; g.strokeStyle = '#000'; g.lineWidth = 2.5; g.beginPath(); g.arc(px, py, r || 7, 0, 7); g.stroke(); g.fill(); if (t) { g.font = '800 13px system-ui,sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(t, px, py - 12); g.fillStyle = '#fff'; g.fillText(t, px, py - 12); } };
   for (const k in POI) { const q = POI[k]; if (q && q.sx !== undefined && q.name && bigV.z > 1.6) lab(q.sx, q.sy, '#e8e8e8', q.name, 3.5); }
-  for (const id in PLACES) if (id !== 'tatin') lab(PLACES[id].x, PLACES[id].y, PLACES[id].col, PLACES[id].name, 6);
+  for (const id in PLACES) if (id !== HUBID) lab(PLACES[id].x, PLACES[id].y, PLACES[id].col, PLACES[id].name, 6);
   if (train) for (let i = 0; i < 6; i += 5) { const w = trainPos(i); lab(w.x, w.y, '#ff8a3d', i ? '' : '🚆 Train', 6); }
   if (wp) lab(wp.x, wp.y, '#35d0ff', '📍 ' + wp.name, 8);
-  if (!mission) lab(hub.x, hub.y, '#ffd23f', 'Hôtel Tatin', 8); else lab(mission.to.x, mission.to.y, '#ff8a3d', 'Destination', 8);
+  if (!mission) lab(hub.x, hub.y, '#ffd23f', FOOT ? 'Lycée' : 'Hôtel Tatin', 8); else lab(mission.to.x, mission.to.y, '#ff8a3d', 'Destination', 8);
   if (myCar && cars.indexOf(myCar) >= 0 && !player.car) lab(myCar.x, myCar.y, save.color, 'Ma voiture', 6);
   for (const c of cars) if (c.type === 'cop' && c.chase) lab(c.x, c.y, Math.floor(time * 6) % 2 ? '#ff3b3b' : '#3b6bff', '', 5);
   const p = pp(), [px, py] = pos(p.x, p.y); g.save(); g.translate(px, py); g.rotate(p.a); g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 3; g.beginPath(); g.moveTo(13, 0); g.lineTo(-9, -9); g.lineTo(-4, 0); g.lineTo(-9, 9); g.closePath(); g.stroke(); g.fill(); g.restore();
@@ -1078,7 +1113,7 @@ function drawMini() {
   mctx.fillStyle = '#1d2b22'; mctx.fillRect(0, 0, 300, 300); mctx.drawImage(mmBase, sx, sy, CR, CR, 0, 0, 300, 300);
   const pos = (x, y) => [((x / S - MX0) * sc - sx) * k, ((y / S - MY0) * sc - sy) * k];
   const dot = (x, y, r, col, edge) => { let [px, py] = pos(x, y); if (edge) { px = clamp(px, 8, 292); py = clamp(py, 8, 292); } else if (px < 0 || py < 0 || px > 300 || py > 300) return; mctx.fillStyle = col; mctx.strokeStyle = '#000'; mctx.lineWidth = 2; mctx.beginPath(); mctx.arc(px, py, r, 0, 7); mctx.stroke(); mctx.fill(); };
-  for (const id in PLACES) if (id !== 'tatin') dot(PLACES[id].x, PLACES[id].y, 4, PLACES[id].col, false);
+  for (const id in PLACES) if (id !== HUBID) dot(PLACES[id].x, PLACES[id].y, 4, PLACES[id].col, false);
   if (train) for (let i = 0; i < 6; i += 2) { const w = trainPos(i); dot(w.x, w.y, 4, '#ff8a3d', false); }
   for (const b of boars) dot(b.x, b.y, 2.5, '#7a4a2a', false);
   if (wp) dot(wp.x, wp.y, 6, '#35d0ff', true);
@@ -1123,7 +1158,7 @@ function updateHud(dt) {
   $('stars').innerHTML = '<b>' + '★'.repeat(wanted) + '</b>' + '☆'.repeat(5 - wanted);
   const ms = $('mission');
   if (mission) { const st = mission.steps[mission.step]; ms.innerHTML = '<b>' + mission.def.title + '</b><br>' + st.txt + (mission.steps.length > 1 ? ' (' + (mission.step + 1) + '/' + mission.steps.length + ')' : '') + '<br>⏱ <span id="timer">' + Math.max(0, Math.ceil(mission.left)) + ' s</span>' + (mission.def.clean ? ' · reste discret' : ''); }
-  else ms.textContent = "Entre dans l'Hôtel Tatin (rond jaune, touche E) et parle à Mme Tatin.";
+  else ms.textContent = FOOT ? "Entre au Lycée Claude de France (rond jaune, touche E) et parle au proviseur." : "Entre dans l'Hôtel Tatin (rond jaune, touche E) et parle à Mme Tatin.";
   const p = pp(); nameT -= dt;
   if (nameT <= 0) {
     nameT = 0.3; let place = '';
@@ -1179,7 +1214,7 @@ const ACH = [
   ['photo', 'Influenceur', 'Poste 3 photos', () => save.st.photos >= 3], ['km', 'Globe-trotteur', 'Parcours 20 km', () => save.st.km >= 20], ['car', 'Collectionneur', 'Possède tous les véhicules', () => Object.keys(KINDS).every(k => save.owned.includes(k))]
 ];
 function checkAch() { for (const [id, name, , t] of ACH) if (!save.ach[id] && t()) { save.ach[id] = 1; persist(); toast('🏆 Succès : ' + name, 3.4); gramEvent('ach', name); } }
-const GDEST = ['gare', 'mairie', 'gendarmerie', 'eglise', 'college', 'hopital', 'parc', 'cinema', 'mediatheque', 'pompiers', 'salle', 'marche', 'etang'];
+const GDEST = FOOT ? ['gare', 'lycee', 'lycepro', 'ecole', 'stade', 'calmat', 'pyramide', 'aldi', 'vieclaire', 'marie', 'pauze', 'boucherie', 'cafe', 'manger', 'action', 'pharmacie'] : ['gare', 'mairie', 'gendarmerie', 'eglise', 'college', 'hopital', 'parc', 'cinema', 'mediatheque', 'pompiers', 'salle', 'marche', 'etang'];
 function dests() {
   const a = [], used = {}; for (const id in PLACES) { const q = PLACES[id]; a.push({ k: id, name: q.name, x: q.x, y: q.y }); if (q.poi) used[q.poi] = 1; }
   for (const k of GDEST) if (POI[k] && !used[k]) a.push({ k, name: POI[k].name, x: POI[k].sx, y: POI[k].sy });
@@ -1193,7 +1228,7 @@ function takePhoto() {
 }
 function startGig() {
   if (mission) { toast('Termine d’abord ta mission en cours.', 2); return; } if (wanted > 0) { toast('Pas de livraison avec les gendarmes aux trousses !', 2); return; }
-  const shops = ['boulangerie', 'intermarche', 'carrefour'].filter(k => POI[k]), dl = GDEST.filter(k => POI[k] && k !== 'etang'); if (!shops.length || !dl.length) return;
+  const shops = (FOOT ? ['pauze', 'aldi', 'vieclaire', 'manger', 'boucherie', 'marie'] : ['boulangerie', 'intermarche', 'carrefour']).filter(k => POI[k]), dl = GDEST.filter(k => POI[k] && k !== 'etang'); if (!shops.length || !dl.length) return;
   const sh = shops[randInt(0, shops.length - 1)]; let de = dl[randInt(0, dl.length - 1)], tries = 0; while (tries++ < 20 && (de === sh || dist(POI[sh].sx, POI[sh].sy, POI[de].sx, POI[de].sy) < 700)) de = dl[randInt(0, dl.length - 1)];
   const d = dist(pp().x, pp().y, POI[sh].sx, POI[sh].sy) + dist(POI[sh].sx, POI[sh].sy, POI[de].sx, POI[de].sy), pay = Math.round(55 + d / 28);
   togglePhone(); startMission({ title: 'Lamotte-Eats : livraison', gig: true, say: '🍔 Nouvelle livraison : récupère la commande chez ' + POI[sh].name + ' puis livre-la (' + pay + ' €).', done: 'Livraison terminée, client satisfait !', steps: [{ poi: sh, txt: 'Récupère la commande : ' + POI[sh].name }, { poi: de, txt: 'Livre le client : ' + POI[de].name }], pay });
@@ -1215,7 +1250,7 @@ function renderPhone() {
   $('pbar').innerHTML = bar; const A = phoneApp, btn = (act, label, off) => '<span class="btn' + (off ? ' off' : '') + '" data-p="' + act + '">' + label + '</span>'; let h = '';
   if (A === 'home') {
     h = '<div class="apps">' + [['gram', '📸', 'Lamotte-Gram', 'linear-gradient(45deg,#f9a825,#d81b60,#7b1fa2)'], ['gps', '🗺️', 'GPS', '#1e88e5'], ['sms', '💬', 'Messages', '#2e7d32'], ['taxi', '📞', 'Contacts', '#00897b'], ['eats', '🍔', 'Lamotte-Eats', '#ef6c00'], ['bank', '🏦', 'Banque', '#455a64'], ['car', '🚗', 'Mon garage', '#c62828'], ['radio', '🎵', 'Radio', '#6a1b9a'], ['ach', '🏆', 'Succès', '#c79a00'], ['stat', '📊', 'Stats', '#37474f']]
-      .map(a => '<div class="app" data-p="app:' + a[0] + '"><i style="background:' + a[3] + '">' + a[1] + '</i>' + a[2] + (a[0] === 'sms' && smsUnread ? '<b>' + smsUnread + '</b>' : '') + '</div>').join('') + '</div>';
+      .filter(a => !(FOOT && a[0] === 'car')).map(a => '<div class="app" data-p="app:' + a[0] + '"><i style="background:' + a[3] + '">' + a[1] + '</i>' + a[2] + (a[0] === 'sms' && smsUnread ? '<b>' + smsUnread + '</b>' : '') + '</div>').join('') + '</div>';
   } else if (A === 'gram') {
     h = '<h2>📸 Lamotte-Gram</h2>' + btn('photo', '📸 Prendre une photo') + (feed.length ? '' : '<p style="opacity:.6">Rien pour l’instant. Fais parler de toi…</p>');
     for (const p of feed) { const lk = Math.round(p.likes * (1 - Math.exp(-(nowS() - p.born) / 25))); h += '<div class="post"><b>' + p.u[1] + ' ' + p.u[0] + '</b> <small>' + p.clock + '</small><br>' + (p.img ? '<img src="' + p.img + '">' : '') + p.text + '<br><small>❤️ ' + lk + '</small></div>'; }
@@ -1225,8 +1260,8 @@ function renderPhone() {
   } else if (A === 'sms') {
     smsUnread = 0; h = '<h2>💬 Messages</h2>'; for (const m of smsList) h += '<div class="post"><b>' + m.from + '</b> <small>' + m.clock + '</small><br>' + m.text + '</div>'; if (!smsList.length) h += '<p style="opacity:.6">Aucun message.</p>';
   } else if (A === 'taxi') {
-    h = '<h2>📞 Contacts</h2><div class="post"><b>🥧 Mme Tatin</b><br>' + (mission ? 'Mission : ' + mission.def.title + ' · ' + mission.steps[mission.step].txt : 'Passe à l’Hôtel Tatin pour une nouvelle mission.') + '</div><h3>🚕 Taxi Lamotte (25 €)</h3>';
-    for (const d of dests()) h += '<div class="row"><span>' + d.name + '</span>' + btn('taxi:' + d.k, 'Réserver', money < 25) + '</div>';
+    h = '<h2>📞 Contacts</h2><div class="post"><b>' + (FOOT ? '🎓 M. Lenoir (proviseur)' : '🥧 Mme Tatin') + '</b><br>' + (mission ? 'Mission : ' + mission.def.title + ' · ' + mission.steps[mission.step].txt : (FOOT ? 'Passe au lycée pour une nouvelle mission.' : 'Passe à l’Hôtel Tatin pour une nouvelle mission.')) + '</div>' + (FOOT ? '<h3>🚆 Train</h3><div class="post">Gare du Faubourg d’Orléans : trains pour Lamotte-Beuvron (6 €).</div>' : '<h3>🚕 Taxi Lamotte (25 €)</h3>');
+    if (!FOOT) for (const d of dests()) h += '<div class="row"><span>' + d.name + '</span>' + btn('taxi:' + d.k, 'Réserver', money < 25) + '</div>';
   } else if (A === 'eats') {
     h = '<h2>🍔 Lamotte-Eats</h2><h3>Livreur</h3><div class="row"><span>Une course à effectuer, payée selon la distance.</span>' + btn('gig', 'Prendre') + '</div><h3>Commander (+3 € de livraison)</h3>';
     for (const f of FOOD_BAKERY.concat(FOOD_MARKET)) h += '<div class="row"><span>' + f[1] + '<br><small>' + f[4] + ' · ' + (f[2] + 3) + ' €</small></span>' + btn('food:' + f[0], 'Commander', money < f[2] + 3) + '</div>';
@@ -1270,6 +1305,7 @@ $('phone').addEventListener('click', e => {
 /* ---------- trains, sangliers, radio ---------- */
 const TCHAIN = [6, 28, 30, 7, 8, 12, 13, 16, 39, 38, 17, 24, 23], TLEN = 6, TSP = 72;
 function buildTrain() {
+  if (FOOT) return;
   const pts = []; let cx = null, cy = null;
   for (const idx of TCHAIN) {
     const r = D.rail[idx]; if (!r) continue; const a = []; for (let i = 0; i < r.length; i += 2) a.push([r[i] / 10 * S, r[i + 1] / 10 * S]);
@@ -1385,6 +1421,7 @@ function drawRailStuff(scale, vx0, vx1, vy0, vy1) {
   }
 }
 function updateBoars(dt) {
+  if (FOOT) return;
   const p = pp(); boarCD -= dt;
   if (boarCD <= 0) {
     boarCD = rand(7, 14);
@@ -1488,6 +1525,18 @@ const ROOMS = {
     { t: 'r', x: 450, y: 50, w: 210, h: 44, c: '#8a6a4a', solid: true, label: 'Caisse' },
     { t: 'r', x: 120, y: 200, w: 40, h: 150, c: '#9a7a5a', solid: true, deco: true }, { t: 'r', x: 260, y: 200, w: 40, h: 150, c: '#9a7a5a', solid: true, deco: true }, { t: 'r', x: 400, y: 240, w: 40, h: 150, c: '#9a7a5a', solid: true, deco: true } ] }
 };
+ROOMS.school = { title: 'Lycée', floor: '#cdd3d9', line: 'rgba(40,60,90,.16)', npc: { x: 350, y: 104, col: '#2f5d8a', name: 'M. Lenoir', tip: 'E : parler au proviseur' }, obs: [
+  { t: 'r', x: 120, y: 30, w: 460, h: 26, c: '#2f5a44', solid: true, label: 'Tableau' },
+  { t: 'r', x: 260, y: 72, w: 180, h: 38, c: '#7a5a3a', solid: true, label: 'Bureau' },
+  { t: 'r', x: 70, y: 190, w: 110, h: 34, c: '#a9855a', solid: true }, { t: 'r', x: 70, y: 280, w: 110, h: 34, c: '#a9855a', solid: true },
+  { t: 'r', x: 520, y: 190, w: 110, h: 34, c: '#a9855a', solid: true }, { t: 'r', x: 520, y: 280, w: 110, h: 34, c: '#a9855a', solid: true },
+  { t: 'c', x: 350, y: 250, r: 26, c: '#8a6a4a', solid: true }, { t: 'c', x: 40, y: 400, r: 14, c: '#2f7a35', solid: true }, { t: 'c', x: 660, y: 400, r: 14, c: '#2f7a35', solid: true } ] };
+ROOMS.station = { title: 'Gare', floor: '#cfc9bd', line: 'rgba(60,50,30,.18)', npc: { x: 560, y: 110, col: '#d14a3a', name: 'Le guichetier', tip: 'E : acheter un billet de train' }, obs: [
+  { t: 'r', x: 440, y: 50, w: 220, h: 44, c: '#5d6b7c', solid: true, label: 'Guichet' },
+  { t: 'r', x: 60, y: 40, w: 220, h: 26, c: '#1f3c66', solid: true, label: 'Horaires' },
+  { t: 'r', x: 80, y: 220, w: 150, h: 26, c: '#8a6a4a', solid: true, label: 'Banc' }, { t: 'r', x: 80, y: 300, w: 150, h: 26, c: '#8a6a4a', solid: true, label: 'Banc' },
+  { t: 'r', x: 470, y: 250, w: 150, h: 26, c: '#8a6a4a', solid: true, label: 'Banc' },
+  { t: 'c', x: 640, y: 380, r: 16, c: '#2f7a35', solid: true } ] };
 function roomPush(x, y, r, R) {
   for (const o of R.obs) {
     if (!o.solid) continue;
@@ -1518,7 +1567,7 @@ function insideAction() {
   if (dist(inside.x, inside.y, 350, 432) < 62) { leaveInside(); return; }
   if (dist(inside.x, inside.y, n.x, n.y) < 85) {
     const kind = PLACES[inside.id].kind;
-    if (kind === 'hotel') { if (mission) toast("Mme Tatin : « Termine d'abord ta livraison ! »", 3); else { startMission(); } }
+    if (kind === 'hotel' || kind === 'school') { if (mission) toast(GIVER + " : « Termine d'abord ta mission ! »", 3); else { startMission(); } }
     else openShop(kind);
   }
 }
@@ -1564,7 +1613,7 @@ function drawInside() {
   ctx.fillStyle = '#fff'; ctx.font = '800 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 3; ctx.strokeText(n.name, n.x, n.y - 28); ctx.fillText(n.name, n.x, n.y - 28);
   ctx.fillStyle = '#ffd23f'; ctx.font = '900 20px system-ui,sans-serif'; ctx.fillText('!', n.x, n.y - 44 + bob);
   ctx.save(); ctx.translate(inside.x, inside.y); ctx.scale(1.6, 1.6); drawPlayerAt(0, 0, inside.a); ctx.restore();
-  ctx.fillStyle = '#fff'; ctx.font = '900 22px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 4; ctx.strokeText(R.title, 350, -14); ctx.fillText(R.title, 350, -14);
+  ctx.fillStyle = '#fff'; ctx.font = '900 22px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 4; { const TT = PLACES[inside.id].keep ? PLACES[inside.id].name : R.title; ctx.strokeText(TT, 350, -14); ctx.fillText(TT, 350, -14); }
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 function openShop(kind) { ovAt = performance.now(); shopOpen = true; shopKind = kind; renderShop(); $('shop').style.display = 'flex'; }
@@ -1585,6 +1634,8 @@ function renderShop() {
     h += '<h2>' + (shopKind === 'bakery' ? '🥖 ' : '🛒 ') + PLACES[inside.id].name + '</h2><div class="money">' + money + ' €</div><h3>À manger</h3><div class="cards">';
     for (const f of items) h += '<div class="card"><b>' + f[1] + '</b>' + f[4] + '<br>Prix : ' + f[2] + ' €<br>' + btn('eat:' + f[0], 'Acheter', money < f[2]) + '</div>';
     h += '</div><h3>Autre</h3><div class="cards"><div class="card"><b>🔫 Vider la caisse</b>Gain rapide… mais les gendarmes seront prévenus (2 étoiles).<br>' + (time < cd ? btn('x', 'Caisse vide pour l’instant', true) : btn('rob', 'Braquer')) + '</div></div>';
+  } else if (shopKind === 'station') {
+    h += '<h2>🚆 ' + PLACES[inside.id].name + '</h2><div class="money">' + money + ' €</div><h3>Billets</h3><div class="cards"><div class="card"><b>🎫 Aller simple : ' + (FOOT ? 'Lamotte-Beuvron' : 'Romorantin-Lanthenay') + '</b>' + (FOOT ? 'Retour à Lamotte-Beuvron, en voiture !' : 'Là-bas, tout se fait à pied. Missions au lycée.') + '<br>Prix : 6 €<br>' + btn('train', 'Acheter et partir', money < 6) + '</div></div>';
   } else {
     h += '<h2>👕 Boutique du centre</h2><div class="money">' + money + ' €</div><h3>Vêtements</h3><div class="cards">';
     for (const [n, c, pr] of OUTFITS) { const own = save.ownedOutfits.includes(c), cur = save.outfit === c; h += '<div class="card"><span class="sw" style="background:' + c + ';cursor:default"></span><b style="display:inline">' + n + '</b><br>' + (own ? '' : 'Prix : ' + pr + ' €<br>') + (cur ? btn('x', 'Porté', true) : own ? btn('outfit:' + c, 'Porter') : btn('outfit:' + c, 'Acheter', money < pr)) + '</div>'; }
@@ -1598,6 +1649,7 @@ $('shop').addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) { if (e.target.id === 'shop' && performance.now() - ovAt > 450) closeShop(); return; }
   const i = t.dataset.act.indexOf(':'), act = i < 0 ? t.dataset.act : t.dataset.act.slice(0, i), arg = i < 0 ? '' : t.dataset.act.slice(i + 1), poor = () => toast("Pas assez d'argent !", 1.6);
   if (act === 'close') { closeShop(); return; }
+  if (act === 'train') { if (money < 6) { poor(); return; } money -= 6; persist(); closeShop(); toast('🚆 Direction ' + (FOOT ? 'Lamotte-Beuvron' : 'Romorantin-Lanthenay') + '…', 3); document.body.style.transition = 'opacity .9s'; document.body.style.opacity = 0; setTimeout(() => { location.href = location.pathname + (FOOT ? '?arr=1' : '?map=romo'); }, 1000); return; }
   if (act === 'eat') { const f = FOOD_BAKERY.concat(FOOD_MARKET).find(x => x[0] === arg); if (money >= f[2]) { money -= f[2]; buff[f[3]] = f[5]; persist(); toast(f[1] + ' : ' + f[4], 2.4); } else poor(); renderShop(); return; }
   if (act === 'rob') { const id = inside.id, gain = shopKind === 'bakery' ? randInt(90, 230) : randInt(200, 520); money += gain; save.st.robs++; gramEvent('rob', PLACES[id].name); sms('Gendarmerie', 'Nous avons reçu un signalement concernant ' + PLACES[id].name + '. Restez où vous êtes.'); persist(); robCD[id] = time + 240; robbedNow = true; closeShop(); toast('💰 +' + gain + ' € ! Sors vite avant l’arrivée des gendarmes !', 3.2); return; }
   if (act === 'buy') { const k = KINDS[arg]; if (money >= k.price) { money -= k.price; save.owned.push(arg); save.kind = arg; vehicleDirty = true; persist(); toast('Acheté : ' + k.name + ' !', 2.4); gramEvent('buy', k.name); sms('Le garagiste', 'Merci pour votre achat : ' + k.name + '. Prenez-en soin !'); } else poor(); }
@@ -1643,9 +1695,12 @@ function startGame() { if (!loaded) return; if (window.matchMedia && matchMedia(
 function pauseGame() { running = false; for (const k in keys) keys[k] = false; $('start').style.display = 'flex'; $('goBtn').textContent = '▶ REPRENDRE'; if (AC) { engG.gain.value = 0; sirG.gain.value = 0; helG.gain.value = 0; trnG.gain.value = 0; bellG.gain.value = 0; } if (typeof speechSynthesis !== 'undefined') safe(() => speechSynthesis.cancel()); }
 $('start').addEventListener('pointerdown', startGame);
 
-fetch('data.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => {
-  D = d; setup(); initWorld(); loaded = true; $('goBtn').textContent = '▶ JOUER'; $('goBtn').classList.remove('wait');
-}).catch(e => { $('goBtn').textContent = 'Erreur : data.json introuvable'; });
+fetch(FOOT ? 'data_romo.json' : 'data.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => {
+  D = d; setup(); initWorld(); loaded = true;
+  if (FOOT) { $('tipCar').style.display = 'none'; $('tipDoor').innerHTML = '<kbd>E</kbd> devant une porte (cercle de couleur) : entrer au lycée, dans les commerces, à la gare'; $('tipMain').textContent = 'Romorantin-Lanthenay, uniquement à pied ! Entre au Lycée Claude de France (rond jaune) et parle au proviseur pour prendre une mission. Reprends le train à la gare pour rentrer à Lamotte-Beuvron.'; $('mission').textContent = 'Va au Lycée Claude de France (le rond jaune) pour prendre une mission.'; }
+  else $('tipMain').textContent += ' Prends le train à la gare pour visiter Romorantin (à pied).';
+  $('goBtn').textContent = '▶ JOUER'; $('goBtn').classList.remove('wait');
+}).catch(e => { $('goBtn').textContent = 'Erreur : ' + (FOOT ? 'data_romo.json' : 'data.json') + ' introuvable'; });
 requestAnimationFrame(frame);
 })();
 </script>
