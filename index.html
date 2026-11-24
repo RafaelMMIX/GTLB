@@ -56,10 +56,14 @@
   #pnav{display:flex;justify-content:space-around;padding:8px 0 10px;font-size:19px;cursor:pointer;background:#0a0d12}
   #pscr h2{margin:6px 0 4px;font-size:18px}
   #pscr h3{margin:10px 0 2px;font-size:13px;opacity:.7;text-transform:uppercase}
-  .apps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 6px;padding-top:16px}
-  .app{text-align:center;font-size:11px;cursor:pointer;position:relative}
-  .app i{display:flex;align-items:center;justify-content:center;width:58px;height:58px;margin:0 auto 4px;border-radius:15px;font-style:normal;font-size:28px}
-  .app b{position:absolute;top:-4px;right:14px;background:#ff3b30;border-radius:9px;padding:0 6px;font-size:11px}
+  .apps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 2px;padding-top:10px}
+  .hclock{font-size:44px;font-weight:300;text-align:center;margin-top:6px;letter-spacing:1px}.hdate{text-align:center;font-size:12px;opacity:.8;margin-bottom:6px}.hwid{display:flex;gap:8px;margin:8px 0 4px}.hwid div{flex:1;background:rgba(255,255,255,.12);border-radius:14px;padding:7px 9px;font-size:11px;line-height:1.35}.hwid b{font-size:15px}
+  .calc{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.calc span{background:rgba(255,255,255,.1);border-radius:12px;padding:12px 0;text-align:center;font-size:18px;cursor:pointer}.calc span.op{background:#ef6c00}.calc span.eq{background:#2e7d32}.cdisp{background:rgba(0,0,0,.4);border-radius:12px;padding:10px 12px;text-align:right;font-size:26px;min-height:30px;overflow:hidden}
+  .wall{display:inline-block;width:46px;height:70px;border-radius:10px;margin:4px;cursor:pointer;border:2px solid transparent}.wall.on{border-color:#fff}
+  .reels{font-size:44px;text-align:center;margin:10px 0;letter-spacing:6px}
+  .app{text-align:center;font-size:10px;cursor:pointer;position:relative}
+  .app i{display:flex;align-items:center;justify-content:center;width:52px;height:52px;margin:0 auto 4px;border-radius:15px;font-style:normal;font-size:28px}
+  .app b{position:absolute;top:-4px;right:8px;background:#ff3b30;border-radius:9px;padding:0 6px;font-size:11px}
   .post{background:rgba(255,255,255,.07);border-radius:12px;padding:8px 10px;margin:8px 0;font-size:13px;line-height:1.4}
   .post img{width:100%;border-radius:8px;margin:6px 0;display:block}
   .post small{opacity:.6}
@@ -1245,11 +1249,21 @@ function togglePhone() {
   ovAt = performance.now(); phoneOpen = !phoneOpen; $('phone').style.display = phoneOpen ? 'flex' : 'none';
   if (phoneOpen) { for (const k in keys) keys[k] = false; phoneApp = 'home'; renderPhone(); }
 }
+const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+const WALLS = ['linear-gradient(160deg,#1e3c72,#2a5298 55%,#f7971e)', 'linear-gradient(160deg,#134e5e,#71b280)', 'linear-gradient(160deg,#41295a,#2f0743 60%,#c33764)', 'linear-gradient(160deg,#232526,#414345)', 'linear-gradient(160deg,#ff9966,#ff5e62)', 'linear-gradient(160deg,#0f2027,#203a43 55%,#2c5364)'];
+const WXT = [['☀️', 'Ensoleillé'], ['⛅', 'Éclaircies'], ['☁️', 'Nuageux'], ['🌧️', 'Pluie'], ['🌫️', 'Brouillard de Sologne']];
+function wx(d) { const day = Math.floor(gameMin / 1440) + d, r = hash(day, 77), w = WXT[Math.floor(r * 5)], hr = (gameMin % 1440) / 60; return { ico: w[0], txt: w[1], t: Math.round(6 + hash(day, 5) * 16 + (d === 0 ? Math.sin((hr - 9) / 24 * 6.28) * 4 : 0)) }; }
+let calcX = '', casMsg = '', bet = 10, momCD = -999, slotR = ['🍒', '🍋', '🔔'];
+function calcKey(k) {
+  if (k === 'C') calcX = ''; else if (k === '⌫') calcX = calcX.slice(0, -1);
+  else if (k === '=') { try { const e = calcX.replace(/÷/g, '/').replace(/×/g, '*').replace(/−/g, '-'); if (/^[0-9+\-*\/.() ]+$/.test(e) && e) { const v = Function('"use strict";return (' + e + ')')(); calcX = isFinite(v) ? String(Math.round(v * 1e8) / 1e8) : 'Erreur'; } } catch (x) { calcX = 'Erreur'; } }
+  else { if (calcX === 'Erreur') calcX = ''; if (calcX.length < 22) calcX += k; }
+}
 function renderPhone() {
   const bar = '<span>' + clockStr() + '</span><span>📶 4G 🔋 ' + (60 + Math.floor((save.st.play / 60) % 40)) + '%</span>';
-  $('pbar').innerHTML = bar; const A = phoneApp, btn = (act, label, off) => '<span class="btn' + (off ? ' off' : '') + '" data-p="' + act + '">' + label + '</span>'; let h = '';
+  $('pb').style.background = phoneApp === 'home' ? WALLS[(save.wall || 0) % WALLS.length] : '#0d1117'; $('pbar').innerHTML = bar; const A = phoneApp, btn = (act, label, off) => '<span class="btn' + (off ? ' off' : '') + '" data-p="' + act + '">' + label + '</span>'; let h = '';
   if (A === 'home') {
-    h = '<div class="apps">' + [['gram', '📸', 'Lamotte-Gram', 'linear-gradient(45deg,#f9a825,#d81b60,#7b1fa2)'], ['gps', '🗺️', 'GPS', '#1e88e5'], ['sms', '💬', 'Messages', '#2e7d32'], ['taxi', '📞', 'Contacts', '#00897b'], ['eats', '🍔', 'Lamotte-Eats', '#ef6c00'], ['bank', '🏦', 'Banque', '#455a64'], ['car', '🚗', 'Mon garage', '#c62828'], ['radio', '🎵', 'Radio', '#6a1b9a'], ['ach', '🏆', 'Succès', '#c79a00'], ['stat', '📊', 'Stats', '#37474f']]
+    h = '<div class="hclock">' + clockStr() + '</div><div class="hdate">' + DAYS[Math.floor(gameMin / 1440) % 7] + ' · ' + (FOOT ? 'Romorantin' : 'Lamotte-Beuvron') + '</div><div class="hwid"><div>💶<br><b>' + money + ' €</b><br>Banque ' + save.bank + ' €</div><div>' + (mission ? '🎯 ' + mission.def.title + '<br><b>' + Math.max(0, Math.ceil(mission.left)) + ' s</b>' : '🎯 Aucune mission<br><b>Libre</b>') + '</div><div>' + wx(0).ico + '<br><b>' + wx(0).t + '°</b><br>' + wx(0).txt + '</div></div><div class="apps">' + [['gram', '📸', 'Lamotte-Gram', 'linear-gradient(45deg,#f9a825,#d81b60,#7b1fa2)'], ['gps', '🗺️', 'GPS', '#1e88e5'], ['sms', '💬', 'Messages', '#2e7d32'], ['taxi', '📞', 'Contacts', '#00897b'], ['eats', '🍔', 'Lamotte-Eats', '#ef6c00'], ['bank', '🏦', 'Banque', '#455a64'], ['car', '🚗', 'Mon garage', '#c62828'], ['radio', '🎵', 'Radio', '#6a1b9a'], ['ach', '🏆', 'Succès', '#c79a00'], ['stat', '📊', 'Stats', '#37474f'], ['miss', '🎯', 'Missions', '#d84315'], ['meteo', '🌤️', 'Météo', '#0288d1'], ['calc', '🧮', 'Calculatrice', '#546e7a'], ['casino', '🎰', 'Casino', '#ad1457'], ['set', '⚙️', 'Réglages', '#616161']]
       .filter(a => !(FOOT && a[0] === 'car')).map(a => '<div class="app" data-p="app:' + a[0] + '"><i style="background:' + a[3] + '">' + a[1] + '</i>' + a[2] + (a[0] === 'sms' && smsUnread ? '<b>' + smsUnread + '</b>' : '') + '</div>').join('') + '</div>';
   } else if (A === 'gram') {
     h = '<h2>📸 Lamotte-Gram</h2>' + btn('photo', '📸 Prendre une photo') + (feed.length ? '' : '<p style="opacity:.6">Rien pour l’instant. Fais parler de toi…</p>');
@@ -1261,6 +1275,7 @@ function renderPhone() {
     smsUnread = 0; h = '<h2>💬 Messages</h2>'; for (const m of smsList) h += '<div class="post"><b>' + m.from + '</b> <small>' + m.clock + '</small><br>' + m.text + '</div>'; if (!smsList.length) h += '<p style="opacity:.6">Aucun message.</p>';
   } else if (A === 'taxi') {
     h = '<h2>📞 Contacts</h2><div class="post"><b>' + (FOOT ? '🎓 M. Lenoir (proviseur)' : '🥧 Mme Tatin') + '</b><br>' + (mission ? 'Mission : ' + mission.def.title + ' · ' + mission.steps[mission.step].txt : (FOOT ? 'Passe au lycée pour une nouvelle mission.' : 'Passe à l’Hôtel Tatin pour une nouvelle mission.')) + '</div>' + (FOOT ? '<h3>🚆 Train</h3><div class="post">Gare du Faubourg d’Orléans : trains pour Lamotte-Beuvron (6 €).</div>' : '<h3>🚕 Taxi Lamotte (25 €)</h3>');
+    h = h.replace('<h3>🚕 Taxi', '<h3>Appeler</h3><div class="row"><span>👩 Maman</span>' + btn('call:maman', 'Appeler') + '</div><div class="row"><span>' + (FOOT ? '🎓 M. Lenoir' : '🥧 Mme Tatin') + '</span>' + btn('call:giver', 'Appeler') + '</div><h3>🚕 Taxi');
     if (!FOOT) for (const d of dests()) h += '<div class="row"><span>' + d.name + '</span>' + btn('taxi:' + d.k, 'Réserver', money < 25) + '</div>';
   } else if (A === 'eats') {
     h = '<h2>🍔 Lamotte-Eats</h2><h3>Livreur</h3><div class="row"><span>Une course à effectuer, payée selon la distance.</span>' + btn('gig', 'Prendre') + '</div><h3>Commander (+3 € de livraison)</h3>';
@@ -1275,6 +1290,21 @@ function renderPhone() {
   } else if (A === 'ach') {
     const n = ACH.filter(a => save.ach[a[0]]).length; h = '<h2>🏆 Succès</h2><p style="opacity:.7">' + n + ' / ' + ACH.length + '</p>';
     for (const [id, name, d] of ACH) h += '<div class="row ' + (save.ach[id] ? '' : 'lock') + '"><span>' + (save.ach[id] ? '✅ ' : '🔒 ') + '<b>' + name + '</b><br><small>' + d + '</small></span></div>';
+  } else if (A === 'miss') {
+    h = '<h2>🎯 Missions</h2>';
+    if (mission) { const st = mission.steps[mission.step]; h += '<div class="post"><b>' + mission.def.title + '</b><br>' + st.txt + (mission.steps.length > 1 ? '<br><small>Étape ' + (mission.step + 1) + '/' + mission.steps.length + '</small>' : '') + '<br>⏱ ' + Math.max(0, Math.ceil(mission.left)) + ' s' + (mission.def.clean ? '<br>🤫 Reste discret !' : '') + '</div>' + btn('mgps', '📍 GPS vers l’objectif') + ' ' + btn('mquit', '✘ Abandonner'); }
+    else h += '<div class="post">Aucune mission en cours.<br><small>' + (FOOT ? 'Parle au proviseur au lycée.' : 'Passe à l’Hôtel Tatin voir Mme Tatin.') + '</small></div>';
+    h += '<h3>Prochaine mission</h3><div class="post"><b>' + MISSIONS[mi % MISSIONS.length].title + '</b><br><small>Terminées : ' + save.st.missions + ' · Livraisons : ' + save.st.gigs + '</small></div>';
+  } else if (A === 'meteo') {
+    h = '<h2>🌤️ Météo ' + (FOOT ? 'Romorantin' : 'Lamotte') + '</h2>';
+    for (let d = 0; d < 4; d++) { const w = wx(d); h += '<div class="row"><span>' + w.ico + ' <b>' + (d ? DAYS[(Math.floor(gameMin / 1440) + d) % 7] : 'Aujourd’hui') + '</b><br><small>' + w.txt + '</small></span><b>' + w.t + '°</b></div>'; }
+    h += '<p style="opacity:.6;font-size:11px">Prévisions indicatives. Pas d’effet sur le jeu… pour l’instant.</p>';
+  } else if (A === 'calc') {
+    h = '<h2>🧮 Calculatrice</h2><div class="cdisp">' + (calcX || '0') + '</div><div class="calc">' + ['C', '⌫', '(', ')', '7', '8', '9', '÷', '4', '5', '6', '×', '1', '2', '3', '−', '0', '.', '=', '+'].map(k => '<span class="' + ('÷×−+'.includes(k) ? 'op' : k === '=' ? 'eq' : '') + '" data-p="k:' + k + '">' + k + '</span>').join('') + '</div>';
+  } else if (A === 'casino') {
+    h = '<h2>🎰 Casino de Sologne</h2><div class="post">Poche : <b>' + money + ' €</b><br><small>Jouer, c’est risquer de tout perdre. (Mais c’est fictif.)</small></div><h3>Mise</h3>' + [10, 50, 100, 500].map(b => '<span class="btn' + (bet === b ? ' off' : '') + '" data-p="bet:' + b + '">' + b + ' €</span>').join(' ') + '<h3>Pile ou face (×2)</h3>' + btn('flip:p', '🪙 Pile', money < bet) + ' ' + btn('flip:f', '🪙 Face', money < bet) + '<h3>Machine à sous (3 identiques ×8, paire = remboursé)</h3>' + btn('slot', '🎰 Lancer', money < bet) + '<div class="reels">' + slotR.join(' ') + '</div><div class="post">' + (casMsg || 'Bonne chance !') + '</div>';
+  } else if (A === 'set') {
+    h = '<h2>⚙️ Réglages</h2><h3>Fond d’écran</h3>' + WALLS.map((w, i) => '<span class="wall' + ((save.wall || 0) % WALLS.length === i ? ' on' : '') + '" style="background:' + w + '" data-p="wall:' + i + '"></span>').join('') + '<h3>À propos</h3><div class="post">Grand Theft Lamotte-Beuvron<br><small>Cartes : © les contributeurs d’OpenStreetMap (ODbL)</small></div>';
   } else if (A === 'stat') {
     const st = save.st, r = (a, b) => '<div class="row"><span>' + a + '</span><b>' + b + '</b></div>';
     h = '<h2>📊 Statistiques</h2>' + r('Missions terminées', st.missions) + r('Livraisons', st.gigs) + r('Crimes', st.crimes) + r('Caisses vidées', st.robs) + r('Arrestations', st.busted) + r('Sangliers renversés', st.boars) + r('Percuté par le train', st.train) + r('Photos postées', st.photos) + r('Distance parcourue', st.km.toFixed(1) + ' km') + r('Temps de jeu', Math.floor(st.play / 60) + ' min');
@@ -1298,6 +1328,17 @@ $('phone').addEventListener('click', e => {
   else if (a === 'wd') { const v = arg === 'all' ? save.bank : +arg; if (save.bank >= v && v > 0) { save.bank -= v; money += v; persist(); } }
   else if (a === 'callcar') { togglePhone(); callCar(); return; }
   else if (a === 'usek') { save.kind = arg; vehicleDirty = true; persist(); toast('Véhicule choisi : ' + KINDS[arg].name, 1.8); }
+  else if (a === 'mgps') { if (mission) { const st = mission.steps[mission.step]; wp = { x: mission.to.x, y: mission.to.y, name: st.txt }; toast('📍 GPS : objectif de mission', 1.8); } }
+  else if (a === 'mquit') { if (mission) { failMission('Mission abandonnée.'); } }
+  else if (a === 'k') calcKey(arg);
+  else if (a === 'bet') bet = +arg;
+  else if (a === 'flip') { if (money >= bet) { const win = Math.random() < 0.5; money += win ? bet : -bet; casMsg = (win ? '🎉 Gagné ! +' : '💸 Perdu… −') + bet + ' €'; persist(); } }
+  else if (a === 'slot') { if (money >= bet) { const sy = ['🍒', '🍋', '🔔', '⭐', '7️⃣']; slotR = [0, 1, 2].map(() => sy[randInt(0, 4)]); const eq = (slotR[0] === slotR[1]) + (slotR[1] === slotR[2]) + (slotR[0] === slotR[2]); money -= bet; if (eq === 3) { money += bet * 8; casMsg = '🎉 JACKPOT ! +' + bet * 7 + ' €'; } else if (eq === 1) { money += bet; casMsg = 'Paire : mise remboursée.'; } else casMsg = '💸 Perdu… −' + bet + ' €'; persist(); } }
+  else if (a === 'wall') { save.wall = +arg; persist(); }
+  else if (a === 'call') {
+    if (arg === 'maman') { if (time - momCD < 300) toast('👩 Maman : « Je viens de t’envoyer quelque chose, mange un peu ! »', 3); else { momCD = time; const g = randInt(20, 40); money += g; persist(); toast('👩 Maman : « Tiens, un petit virement de ' + g + ' € ! »', 3.4); } }
+    else toast(mission ? GIVER + ' : « ' + mission.steps[mission.step].txt + '. Courage ! »' : GIVER + ' : « ' + (FOOT ? 'Passe me voir au lycée !' : 'Passe à l’hôtel, j’ai du travail pour toi !') + ' »', 3.2);
+  }
   else if (a === 'st') { radioSt = +arg; radioStep = 0; radioNext = 0; flashT = 0; }
   renderPhone();
 });
